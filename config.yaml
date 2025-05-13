@@ -1,0 +1,3 @@
+log_folder: "logs"
+log_level_console: "INFO"
+log_level_file: "DEBUG"
