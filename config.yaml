@@ -3,3 +3,10 @@ log_level_console: "INFO"
 log_level_file: "DEBUG"
 
 index_path: "index.sqlite"
+
+embedding_factory:
+  batch_size: 32
+  process_remote: false
+  remote_host: "http://localhost"
+  remote_port: 8000
+  remote_endpoint: "/generate_embedding"

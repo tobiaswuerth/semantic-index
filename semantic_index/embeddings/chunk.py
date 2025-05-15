@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 
 class Chunk(NamedTuple):
@@ -7,7 +7,7 @@ class Chunk(NamedTuple):
     text: str
 
 
-def chunk_text(text: str, chunk_size: int = 1536, overlap: int = 512) -> list[Chunk]:
+def chunk_text(text: str, chunk_size: int = 1536, overlap: int = 512) -> List[Chunk]:
     """
     Split text into overlapping chunks of specified size.
 

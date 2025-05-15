@@ -42,9 +42,7 @@ class Manager:
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
 
         # get embeddings
-        query_embedding = self.embedding_factory.model.encode(
-            [query], batch_size=1, progressbar=False
-        ).flatten()
+        query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
 
         # Cosine similarity calculation (normalized dot product)
