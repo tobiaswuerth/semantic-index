@@ -40,8 +40,4 @@ if __name__ == "__main__":
 
     # test folder
     fh = FileSourceHandler()
-    for file in fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'):
-        print("-"*80)
-        print(file)
-        text = fh.read(file)
-        print(text)
+    index.ingest_sources(fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'))

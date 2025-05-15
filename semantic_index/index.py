@@ -2,6 +2,7 @@ import os
 import logging
 import numpy as np
 import sqlite3
+from typing import Generator
 
 from .models import Embedding, Source
 from .config import config
@@ -30,27 +31,23 @@ class Index:
             cursor = conn.cursor()
 
             cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS sources (
-                id INTEGER PRIMARY KEY,
-                uri TEXT NOT NULL UNIQUE,
-                last_modified TIMESTAMP NOT NULL,
-                last_processed TIMESTAMP
-            )
-            """
+                """ CREATE TABLE IF NOT EXISTS sources (
+                        id INTEGER PRIMARY KEY,
+                        uri TEXT NOT NULL UNIQUE,
+                        last_modified TIMESTAMP NOT NULL,
+                        last_processed TIMESTAMP
+                    )"""
             )
 
             cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS embeddings (
-                id INTEGER PRIMARY KEY,
-                source_id INTEGER NOT NULL,
-                embedding BLOB NOT NULL,
-                section_from INTEGER NOT NULL,
-                section_to INTEGER NOT NULL,
-                FOREIGN KEY (source_id) REFERENCES sources (id)
-            )
-            """
+                """ CREATE TABLE IF NOT EXISTS embeddings (
+                        id INTEGER PRIMARY KEY,
+                        source_id INTEGER NOT NULL,
+                        embedding BLOB NOT NULL,
+                        section_from INTEGER NOT NULL,
+                        section_to INTEGER NOT NULL,
+                        FOREIGN KEY (source_id) REFERENCES sources (id)
+                    )"""
             )
 
             cursor.execute(
@@ -101,3 +98,28 @@ class Index:
         self.logger.info(
             f"Loaded {len(self.sources)} sources and {len(self.embeddings)} embeddings from the database"
         )
+
+    def ingest_sources(self, sources: Generator[Source, None, None]):
+        self.logger.info("Ingesting sources into the database...")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            for source in sources:
+                cursor.execute(
+                    """ INSERT INTO sources (uri, last_modified, last_processed)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(uri) DO UPDATE SET
+                            last_modified = ?
+                    """,
+                    (
+                        source.uri,
+                        source.last_modified,
+                        source.last_processed,
+                        source.last_modified,
+                    ),
+                )
+                conn.commit()
+                self.logger.debug(f"Inserted source: {source.uri}")
+
+        # reload data
+        self.load()
