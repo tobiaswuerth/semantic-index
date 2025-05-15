@@ -12,6 +12,7 @@ from .handler import SourceHandler, Source
 class FileSourceHandler(SourceHandler):
 
     def __init__(self):
+        super().__init__(scheme="file:///")
         self.extensions = {
             ".txt": FileSourceHandler._read_plaintext,
             ".md": FileSourceHandler._read_plaintext,
@@ -33,7 +34,7 @@ class FileSourceHandler(SourceHandler):
                 last_modified = datetime.fromtimestamp(os.path.getmtime(path))
                 yield Source(
                     id=None,
-                    uri=f'file:///{path}',
+                    uri=self.scheme + path.replace("\\", "/"),
                     last_modified=last_modified,
                     last_processed=None,
                 )
@@ -41,7 +42,7 @@ class FileSourceHandler(SourceHandler):
     def _read_source(self, source: Source) -> str | None:
         ext = os.path.splitext(source.uri)[1]
         reader = self.extensions[ext]
-        path = source.uri.replace("file:///", "")
+        path = source.uri[len(self.scheme) :]
         text = reader(path)
         return text
 

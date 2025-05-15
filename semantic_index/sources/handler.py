@@ -8,6 +8,9 @@ from semantic_index.models import Source
 class SourceHandler(abc.ABC):
     logger = logging.getLogger(__name__)
 
+    def __init__(self, scheme: str):
+        self.scheme = scheme
+
     @abc.abstractmethod
     def crawl(self, base: str) -> Generator[Source, None, None]:
         """
