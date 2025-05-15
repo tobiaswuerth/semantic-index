@@ -3,7 +3,7 @@ import sys
 import os
 from datetime import datetime
 
-from semantic_index import GTEEmbeddingModel, config, Index, Embedding, Source
+from semantic_index import config, Index, GTEEmbeddingModel, FileSourceHandler
 
 
 def init_logging():
@@ -37,3 +37,11 @@ if __name__ == "__main__":
 
     index = Index()
     index.load()
+
+    # test folder
+    fh = FileSourceHandler()
+    for file in fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'):
+        print("-"*80)
+        print(file)
+        text = fh.read(file)
+        print(text)

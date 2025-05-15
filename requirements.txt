@@ -1,6 +1,10 @@
-numpy
+pyyaml
 tqdm
+numpy
 scipy
 torch
 transformers
-pyyaml
+
+PyMuPDF
+python-docx
+extract_msg
