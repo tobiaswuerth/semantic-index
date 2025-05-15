@@ -14,14 +14,6 @@ class Index:
     def __init__(self):
         self.sources: list[Source] = []
         self.embeddings: list[Embedding] = []
-
-        self._initialize_db()
-        self.reload_data()
-
-    def recreate_db(self):
-        self.logger.info("Recreating index database...")
-        if os.path.exists(config.index_path):
-            os.remove(config.index_path)
         self._initialize_db()
         self.reload_data()
 
