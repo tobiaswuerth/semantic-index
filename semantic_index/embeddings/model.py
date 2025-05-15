@@ -10,7 +10,7 @@ from transformers import (
 )
 
 
-class GTEEmbeddingModel(torch.nn.Module):
+class GTEEmbeddingModel:
     logger = logging.getLogger(__name__)
 
     def __init__(self):
