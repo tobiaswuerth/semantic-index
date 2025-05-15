@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 import sqlite3
-from typing import Generator
+from typing import Generator, List
 
 from .models import Embedding, Source
 from .config import config
@@ -16,6 +16,14 @@ class Index:
         self.embeddings: list[Embedding] = []
 
         self._initialize_db()
+        self.reload_data()
+
+    def recreate_db(self):
+        self.logger.info("Recreating index database...")
+        if os.path.exists(config.index_path):
+            os.remove(config.index_path)
+        self._initialize_db()
+        self.reload_data()
 
     def _initialize_db(self):
         if os.path.exists(config.index_path):
@@ -60,7 +68,7 @@ class Index:
     def _get_connection(self):
         return sqlite3.connect(config.index_path, detect_types=sqlite3.PARSE_DECLTYPES)
 
-    def load(self):
+    def reload_data(self):
         self.logger.info("Loading database...")
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -104,7 +112,8 @@ class Index:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            for source in sources:
+            si = 0
+            for si, source in enumerate(sources):
                 cursor.execute(
                     """ INSERT INTO sources (uri, last_modified, last_processed)
                         VALUES (?, ?, ?)
@@ -118,8 +127,55 @@ class Index:
                         source.last_modified,
                     ),
                 )
-                conn.commit()
-                self.logger.debug(f"Inserted source: {source.uri}")
+                if (si + 1) % 1000 == 0:
+                    conn.commit()
+                    self.logger.debug(f"Inserted {si + 1} sources into the database...")
+            conn.commit()
+        self.logger.info(f"Inserted {si} sources into the database")
 
-        # reload data
-        self.load()
+    def create_embeddings(self, embeddings: List[Embedding]):
+        self.logger.info("Ingesting embeddings into the database...")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            for embedding in embeddings:
+                cursor.execute(
+                    """ INSERT INTO embeddings (source_id, embedding, section_from, section_to)
+                        VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        embedding.source_id,
+                        embedding.embedding.tobytes(),
+                        embedding.section_from,
+                        embedding.section_to,
+                    ),
+                )
+            conn.commit()
+        self.logger.info(f"Inserted {len(embeddings)} embeddings into the database")
+
+    def delete_embeddings(self, source: Source):
+        assert source.id is not None, "Source ID must be set"
+        self.logger.info(f"Deleting embeddings for source ID: {source.id}")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM embeddings WHERE source_id = ?",
+                (source.id,),
+            )
+            conn.commit()
+        self.logger.debug(f"Deleted embeddings for source ID: {source.id}")
+
+    def update_source(self, source: Source):
+        assert source.id is not None, "Source ID must be set"
+        self.logger.info(f"Updating source ID: {source.id}")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """ UPDATE sources
+                    SET last_processed = ?
+                    WHERE id = ?
+                """,
+                (source.last_processed, source.id),
+            )
+            conn.commit()
+        self.logger.debug(f"Updated source ID: {source.id}")

@@ -3,7 +3,7 @@ import sys
 import os
 from datetime import datetime
 
-from semantic_index import config, Index, GTEEmbeddingModel, FileSourceHandler
+from semantic_index import config, Manager, FileSourceHandler
 
 
 def init_logging():
@@ -29,15 +29,15 @@ def init_logging():
 if __name__ == "__main__":
     init_logging()
 
-    # test embedding
-    model = GTEEmbeddingModel()
-    texts = ["Hello world", "This is a test"]
-    embeddings = model.encode(texts, batch_size=1, progressbar=True)
-    print(embeddings)
+    manager: Manager = Manager()
 
-    # index = Index()
-    # index.load()
+    fh = FileSourceHandler()
+    manager.resolver.register(fh)
 
-    # # test folder
-    # fh = FileSourceHandler()
-    # index.ingest_sources(fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'))
+    manager.index.recreate_db()
+    manager.index.ingest_sources(
+        fh.crawl(r"C:\Users\twuerth\OneDrive - insite ag\Desktop\docs")
+    )
+    manager.index.reload_data()
+
+    manager.process_sources()
