@@ -32,13 +32,17 @@ class FileSourceHandler(SourceHandler):
                 path = os.path.join(root, file)
                 last_modified = datetime.fromtimestamp(os.path.getmtime(path))
                 yield Source(
-                    id=None, uri=path, last_modified=last_modified, last_processed=None
+                    id=None,
+                    uri=f'file:///{path}',
+                    last_modified=last_modified,
+                    last_processed=None,
                 )
 
     def _read_source(self, source: Source) -> str | None:
         ext = os.path.splitext(source.uri)[1]
         reader = self.extensions[ext]
-        text = reader(source.uri)
+        path = source.uri.replace("file:///", "")
+        text = reader(path)
         return text
 
     @staticmethod
