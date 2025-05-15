@@ -6,7 +6,7 @@ index_path: "index.sqlite"
 
 embedding_factory:
   batch_size: 32
-  process_remote: false
-  remote_host: "http://localhost"
+  process_remote: true
+  remote_host: "http://192.168.1.109"
   remote_port: 8000
   remote_endpoint: "/generate_embedding"
