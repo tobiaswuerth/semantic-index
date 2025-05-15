@@ -29,15 +29,15 @@ def init_logging():
 if __name__ == "__main__":
     init_logging()
 
-    # # test embedding
-    # model = GTEEmbeddingModel()
-    # texts = ["Hello world", "This is a test"]
-    # embeddings = model.encode(texts, batch_size=1, progressbar=True)
-    # print(embeddings)
+    # test embedding
+    model = GTEEmbeddingModel()
+    texts = ["Hello world", "This is a test"]
+    embeddings = model.encode(texts, batch_size=1, progressbar=True)
+    print(embeddings)
 
-    index = Index()
-    index.load()
+    # index = Index()
+    # index.load()
 
-    # test folder
-    fh = FileSourceHandler()
-    index.ingest_sources(fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'))
+    # # test folder
+    # fh = FileSourceHandler()
+    # index.ingest_sources(fh.crawl(r'C:\Users\twuerth\OneDrive - insite ag\Desktop\docs'))

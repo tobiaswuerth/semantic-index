@@ -8,11 +8,6 @@ from transformers import (
     AutoTokenizer,
     XLMRobertaTokenizerFast,
 )
-from scipy.spatial.distance import cosine
-
-
-def get_similarity(embedding1, embedding2):
-    return 1 - cosine(embedding1, embedding2)
 
 
 class GTEEmbeddingModel(torch.nn.Module):
@@ -24,8 +19,12 @@ class GTEEmbeddingModel(torch.nn.Module):
         self.logger.info(f"Using device: {self.device}")
         self.logger.info("Loading model...")
         model_name = "Alibaba-NLP/gte-multilingual-base"
-        self.tokenizer: XLMRobertaTokenizerFast = AutoTokenizer.from_pretrained(model_name)
-        self.model: torch.nn.Module = AutoModelForTokenClassification.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch.float16)
+        self.tokenizer: XLMRobertaTokenizerFast = AutoTokenizer.from_pretrained(
+            model_name
+        )
+        self.model: torch.nn.Module = AutoModelForTokenClassification.from_pretrained(
+            model_name, trust_remote_code=True, torch_dtype=torch.float16
+        )
         self.model.to(self.device).eval()
         self.logger.info("Model loaded successfully.")
 
