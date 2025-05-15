@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import NamedTuple, Optional
+from dataclasses import dataclass
+from typing import Optional
 
 
-class Source(NamedTuple):
+@dataclass
+class Source:
     id: Optional[int]
     uri: str
     last_modified: datetime

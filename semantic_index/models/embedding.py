@@ -1,8 +1,10 @@
 import numpy as np
-from typing import NamedTuple, Optional
+from dataclasses import dataclass
+from typing import Optional
 
 
-class Embedding(NamedTuple):
+@dataclass
+class Embedding:
     id: Optional[int]
     source_id: int
     embedding: np.ndarray
