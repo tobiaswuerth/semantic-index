@@ -1,6 +1,6 @@
 # semantic-search
 
-Create a searchable semantic index to find documents and links on sites.
+Create a searchable semantic index to find documents and sites.
 
 # Setup
 on Windows
