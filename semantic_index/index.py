@@ -92,7 +92,7 @@ class Index:
             )
             self.embeddings = []
             for row in cursor.fetchall():
-                embedding = np.frombuffer(row[2], dtype=np.float32)
+                embedding = np.frombuffer(row[2], dtype=np.float16)
                 self.embeddings.append(
                     Embedding(
                         id=row[0],
