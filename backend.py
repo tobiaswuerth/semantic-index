@@ -3,7 +3,7 @@ import sys
 import os
 from datetime import datetime
 
-from semantic_index import GTEEmbeddingModel, config
+from semantic_index import GTEEmbeddingModel, config, Index, Embedding, Source
 
 
 def init_logging():
@@ -29,9 +29,11 @@ def init_logging():
 if __name__ == "__main__":
     init_logging()
 
-    model = GTEEmbeddingModel()
+    # # test embedding
+    # model = GTEEmbeddingModel()
+    # texts = ["Hello world", "This is a test"]
+    # embeddings = model.encode(texts, batch_size=1, progressbar=True)
+    # print(embeddings)
 
-    # test
-    texts = ["Hello world", "This is a test"]
-    embeddings = model.encode(texts, batch_size=1, progressbar=True)
-    print(embeddings)
+    index = Index()
+    index.load()

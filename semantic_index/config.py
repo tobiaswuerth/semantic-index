@@ -6,6 +6,7 @@ class Config(NamedTuple):
     log_folder: str
     log_level_console: str
     log_level_file: str
+    index_path: str
 
 
 def load_config(config_path: str) -> Config:
