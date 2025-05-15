@@ -34,10 +34,11 @@ if __name__ == "__main__":
     fh = FileSourceHandler()
     manager.resolver.register(fh)
 
-    manager.index.recreate_db()
-    manager.index.ingest_sources(
-        fh.crawl(r"C:\Users\twuerth\OneDrive - insite ag\Desktop\docs")
-    )
-    manager.index.reload_data()
+    # manager.index.recreate_db()
+    # manager.index.ingest_sources(
+    #     fh.crawl(r"C:\Users\twuerth\OneDrive - insite ag\Desktop\docs")
+    # )
+    # manager.process_sources()
+    # manager.index.reload_data()
 
-    manager.process_sources()
+    manager.find_knn("EO", 5)

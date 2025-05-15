@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 
 from .embeddings import EmbeddingFactory
 from .index import Index
@@ -36,3 +37,27 @@ class Manager:
 
             # finalize
             self.logger.info(f"Processed source: {source.uri}")
+
+    def find_knn(self, query: str, k: int = 5):
+        self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
+
+        # get embeddings
+        query_embedding = self.embedding_factory.model.encode(
+            [query], batch_size=1, progressbar=False
+        ).flatten()
+        all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
+
+        # Cosine similarity calculation (normalized dot product)
+        similarities = np.dot(all_embeddings, query_embedding)
+        norms = np.linalg.norm(all_embeddings, axis=1) * np.linalg.norm(query_embedding)
+        similarities = similarities / norms
+        top_indices = np.argsort(similarities)[-k:][::-1]
+
+        # Print the top k results
+        source_map = {src.id: src for src in self.index.sources}
+        for idx in top_indices:
+            embedding = self.index.embeddings[idx]
+            source = source_map[embedding.source_id]
+            print(f"Source: {source.uri}")
+            print(f"Similarity: {similarities[idx]:.4f}")
+            print()
