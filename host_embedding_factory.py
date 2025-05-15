@@ -48,7 +48,7 @@ class EmbeddingFactoryRequestHandler(BaseHTTPRequestHandler):
 
 
 def run_server():
-    host = "localhost"
+    host = "0.0.0.0"
     port = 8000
     httpd = HTTPServer((host, port), EmbeddingFactoryRequestHandler)
     print(f"Starting embedding server at http://{host}:{port}")
