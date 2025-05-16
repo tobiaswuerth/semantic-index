@@ -29,7 +29,7 @@ const API_BASE_URL = 'http://localhost:5000';
  * @returns Promise with array of search results
  */
 export async function semanticSearch(query: string, limit: number = 5): Promise<KnnSearchResult[]> {
-    return fetch(`${API_BASE_URL}/api/search_knn`, {
+    return fetch(`${API_BASE_URL}/api/search_knn_by_query`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

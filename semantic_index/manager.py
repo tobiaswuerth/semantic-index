@@ -66,10 +66,33 @@ class Manager:
         top_indices = np.argsort(similarities)[-k:][::-1]
 
         # Print the top k results
-        source_map = {src.id: src for src in self.index.sources}
+        results = {}
+
         for idx in top_indices:
             embedding = self.index.embeddings[idx]
-            source = source_map[embedding.source_id]
-            print(f"Source: {source.uri}")
-            print(f"Similarity: {similarities[idx]:.4f}")
-            print()
+            source = self.index.source_by_id[embedding.source_id]
+            if source.id not in results:
+                results[source.id] = {
+                    "source": source,
+                    "matches": [
+                        {
+                            "embedding_id": embedding.id,
+                            "similarity": similarities[idx],
+                        }
+                    ],
+                }
+            else:
+                if len(results[source.id]["matches"]) < 5:
+                    results[source.id]["matches"].append(
+                        {
+                            "embedding_id": embedding.id,
+                            "similarity": similarities[idx],
+                        }
+                    )
+
+            if len(results) == k and all(
+                len(results[source_id]["matches"]) == 5 for source_id in results
+            ):
+                break
+
+        return list(results.values())

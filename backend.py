@@ -1,42 +1,40 @@
-import logging
-import sys
-import os
-from datetime import datetime
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, field_validator
+import json
 
-from semantic_index import config, Manager, FileSourceHandler
+from semantic_index import Manager, exception_handled_json_api
+
+manager: Manager = Manager()
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def init_logging():
-    os.makedirs(config.log_folder, exist_ok=True)
+class SearchKnnByQueryRequest(BaseModel):
+    query: str
+    limit: int = Field(default=5, ge=1, le=100)
 
-    log_filename = os.path.join(
-        config.log_folder, f"log_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+    @field_validator("query")
+    def query_not_empty(cls, v):
+        if not v:
+            raise ValueError("Query cannot be empty")
+        return v
+
+
+@app.post("/api/search_knn_by_query")
+@exception_handled_json_api
+async def search_knn_by_query(request: SearchKnnByQueryRequest):
+    results = manager.find_knn(request.query, request.limit)
+    return json.dumps(
+        results, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o
     )
 
-    file_handler = logging.FileHandler(log_filename, encoding="utf-8")
-    file_handler.setLevel(getattr(logging, config.log_level_file))
 
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(getattr(logging, config.log_level_console))
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [ %(levelname)s ] %(message)s",
-        handlers=[file_handler, stream_handler],
-    )
-
-
-if __name__ == "__main__":
-    init_logging()
-
-    manager: Manager = Manager()
-
-    fh = FileSourceHandler()
-    manager.resolver.register(fh)
-
-    # manager.index.ingest_sources(fh.crawl(r"I:\\"))
-    # manager.index.ingest_sources(fh.crawl(r"L:\\"))
-    # manager.index.reload_data()
-
-    # manager.process_sources()
-    manager.find_knn("Die Rolle des Arbeitgebers (AG) im Prozess der EO-Anmeldung", 5)
+# To run: uvicorn backend:app --host 0.0.0.0 --port 5000

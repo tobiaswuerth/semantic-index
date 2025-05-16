@@ -13,6 +13,7 @@ class Index:
 
     def __init__(self):
         self.sources: list[Source] = []
+        self.source_by_id = dict[int, Source]()
         self.embeddings: list[Embedding] = []
         self._initialize_db()
         self.reload_data()
@@ -68,7 +69,9 @@ class Index:
             cursor = conn.cursor()
 
             self.logger.info("Loading database sources...")
-            cursor.execute("SELECT id, uri, last_modified, last_processed, error, error_message FROM sources ORDER BY last_modified DESC")
+            cursor.execute(
+                "SELECT id, uri, last_modified, last_processed, error, error_message FROM sources ORDER BY last_modified DESC"
+            )
             self.sources = []
             for row in cursor.fetchall():
                 self.sources.append(
@@ -81,6 +84,7 @@ class Index:
                         error_message=row[5],
                     )
                 )
+            self.source_by_id = {src.id: src for src in self.sources}
 
             self.logger.info("Loading database embeddings...")
             cursor.execute(
@@ -123,7 +127,6 @@ class Index:
                         source.error,
                         source.error_message,
                         source.last_modified,
-
                     ),
                 )
                 if (si + 1) % 1000 == 0:
