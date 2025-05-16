@@ -38,5 +38,5 @@ if __name__ == "__main__":
     # manager.index.ingest_sources(fh.crawl(r"L:\\"))
     # manager.index.reload_data()
 
-    manager.process_sources()
-    # manager.find_knn("EO", 5)
+    # manager.process_sources()
+    manager.find_knn("Die Rolle des Arbeitgebers (AG) im Prozess der EO-Anmeldung", 5)
