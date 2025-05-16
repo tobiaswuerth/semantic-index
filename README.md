@@ -33,7 +33,7 @@ this should start a server, e.g. on http://localhost:5000/.
 #### Embedding Factory
 If the webserver that handles the data and REST API does not have a GPU, invoking the embedding model might result in suboptimal performance. One can host an embedding factory separately by running:
 ```bash
-uvicorn host_embedding_factory:app --host 0.0.0.0 --port 8000
+uvicorn embedding_factory:app --host 0.0.0.0 --port 8000
 ```
 this should start a server, e.g. on http://localhost:8000/.
 Now one can specify the remote host embedding factory by modifying [config.yaml](config.yaml).
