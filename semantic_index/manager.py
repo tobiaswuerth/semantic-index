@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import tqdm
 
 from .embeddings import EmbeddingFactory
 from .index import Index
@@ -15,17 +16,32 @@ class Manager:
         self.resolver: Resolver = Resolver()
 
     def process_sources(self):
-        for source in self.index.sources:
-            if source.last_processed and source.last_modified <= source.last_processed:
-                continue
+        self.logger.info("Processing sources...")
+        todo = [
+            source
+            for source in self.index.sources
+            if not source.error
+            and (
+                not source.last_processed
+                or source.last_modified > source.last_processed
+            )
+        ]
 
-            # source has changed, update embeddings
-            self.logger.info(f"Processing source: {source.uri}...")
+        logging.info(f"Found {len(todo)} sources to process.")
+
+        for source in tqdm.tqdm(todo, desc="Processing sources", unit="source"):
             self.index.delete_embeddings(source)
 
             handler: SourceHandler = self.resolver.find_for(source)
-            contents = handler.read(source)
-            if contents is None:
+            try:
+                contents = handler.read(source)
+                if contents is None or not contents.strip():
+                    raise ValueError(f"Source {source.uri} is empty or not readable.")
+            except Exception as e:
+                source.error = True
+                source.error_message = str(e)
+                self.index.update_source(source)
+                self.logger.error(f"Error processing source {source.uri}: {e}")
                 continue
 
             embeddings = self.embedding_factory.process(contents, source)
@@ -33,10 +49,8 @@ class Manager:
             source.last_processed = source.last_modified
             self.index.update_source(source)
 
-            self.index.reload_data()
-
-            # finalize
-            self.logger.info(f"Processed source: {source.uri}")
+        self.logger.info("Finished processing sources.")
+        self.index.reload_data()
 
     def find_knn(self, query: str, k: int = 5):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")

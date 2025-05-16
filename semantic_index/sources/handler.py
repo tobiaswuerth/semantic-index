@@ -18,23 +18,13 @@ class SourceHandler(abc.ABC):
         """
         pass
 
-    def read(self, source: Source) -> str | None:
-        try:
-            text = self._read_source(source)
-            if text is None:
-                self.logger.warning(f"Failed to read source: {source.uri}")
-                return None
-
-            # clean text
-            text = " ".join(text.split())
-            self.logger.debug(f"Read {len(text)} characters from {source.uri}")
-            return text
-        except Exception as e:
-            self.logger.error(f"Error reading source {source.uri}: {e}")
-            return None
+    def read(self, source: Source) -> str:
+        text = self._read_source(source)
+        text = " ".join(text.split())
+        return text
 
     @abc.abstractmethod
-    def _read_source(self, source: Source) -> str | None:
+    def _read_source(self, source: Source) -> str:
         """
         Read the content of the source.
         """

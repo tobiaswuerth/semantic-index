@@ -25,7 +25,7 @@ class EmbeddingFactory:
 
         chunks: List[Chunk] = chunk_text(content)
         texts: List[str] = [chunk.text for chunk in chunks]
-        embeddings: np.ndarray = self.model.encode(texts, progressbar=True)
+        embeddings: np.ndarray = self.model.encode(texts)
         return [
             Embedding(
                 id=None,

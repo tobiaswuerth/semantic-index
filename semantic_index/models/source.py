@@ -9,3 +9,5 @@ class Source:
     uri: str
     last_modified: datetime
     last_processed: Optional[datetime]
+    error: bool = False
+    error_message: Optional[str] = None

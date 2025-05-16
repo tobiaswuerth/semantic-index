@@ -16,7 +16,7 @@ class BaseEmbeddingModel(abc.ABC):
         progressbar: bool = False,
     ) -> np.ndarray:
         batch_size = config.embedding_factory.batch_size
-        self.logger.info(f"Encoding {len(texts)} texts with batch size {batch_size}...")
+        self.logger.debug(f"Encoding {len(texts)} texts with batch size {batch_size}...")
         if isinstance(texts, str):
             texts = [texts]
 
@@ -30,7 +30,7 @@ class BaseEmbeddingModel(abc.ABC):
             batch = texts[i : i + batch_size]
             embeddings.append(self._encode_batch(batch))
 
-        self.logger.info("Encoding completed.")
+        self.logger.debug("Encoding completed.")
         if progressbar:
             iter.close()
         return np.vstack(embeddings)

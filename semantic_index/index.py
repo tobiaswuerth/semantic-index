@@ -35,7 +35,9 @@ class Index:
                         id INTEGER PRIMARY KEY,
                         uri TEXT NOT NULL UNIQUE,
                         last_modified TIMESTAMP NOT NULL,
-                        last_processed TIMESTAMP
+                        last_processed TIMESTAMP,
+                        error BOOLEAN,
+                        error_message TEXT
                     )"""
             )
 
@@ -66,7 +68,7 @@ class Index:
             cursor = conn.cursor()
 
             self.logger.info("Loading database sources...")
-            cursor.execute("SELECT id, uri, last_modified, last_processed FROM sources")
+            cursor.execute("SELECT id, uri, last_modified, last_processed, error, error_message FROM sources ORDER BY last_modified DESC")
             self.sources = []
             for row in cursor.fetchall():
                 self.sources.append(
@@ -75,6 +77,8 @@ class Index:
                         uri=row[1],
                         last_modified=row[2],
                         last_processed=row[3],
+                        error=row[4],
+                        error_message=row[5],
                     )
                 )
 
@@ -107,8 +111,8 @@ class Index:
             si = 0
             for si, source in enumerate(sources):
                 cursor.execute(
-                    """ INSERT INTO sources (uri, last_modified, last_processed)
-                        VALUES (?, ?, ?)
+                    """ INSERT INTO sources (uri, last_modified, last_processed, error, error_message)
+                        VALUES (?, ?, ?, ?, ?)
                         ON CONFLICT(uri) DO UPDATE SET
                             last_modified = ?
                     """,
@@ -116,7 +120,10 @@ class Index:
                         source.uri,
                         source.last_modified,
                         source.last_processed,
+                        source.error,
+                        source.error_message,
                         source.last_modified,
+
                     ),
                 )
                 if (si + 1) % 1000 == 0:
@@ -126,7 +133,7 @@ class Index:
         self.logger.info(f"Inserted {si} sources into the database")
 
     def create_embeddings(self, embeddings: List[Embedding]):
-        self.logger.info("Ingesting embeddings into the database...")
+        self.logger.debug("Creating embeddings in the database...")
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
@@ -137,17 +144,17 @@ class Index:
                     """,
                     (
                         embedding.source_id,
-                        embedding.embedding.tobytes(),
+                        embedding.embedding.astype(np.float16).tobytes(),
                         embedding.section_from,
                         embedding.section_to,
                     ),
                 )
             conn.commit()
-        self.logger.info(f"Inserted {len(embeddings)} embeddings into the database")
+        self.logger.debug(f"Inserted {len(embeddings)} embeddings into the database")
 
     def delete_embeddings(self, source: Source):
         assert source.id is not None, "Source ID must be set"
-        self.logger.info(f"Deleting embeddings for source ID: {source.id}")
+        self.logger.debug(f"Deleting embeddings for source ID: {source.id}")
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -159,15 +166,17 @@ class Index:
 
     def update_source(self, source: Source):
         assert source.id is not None, "Source ID must be set"
-        self.logger.info(f"Updating source ID: {source.id}")
+        self.logger.debug(f"Updating source ID: {source.id}")
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """ UPDATE sources
-                    SET last_processed = ?
+                    SET last_processed = ?, 
+                        error = ?,
+                        error_message = ?
                     WHERE id = ?
                 """,
-                (source.last_processed, source.id),
+                (source.last_processed, source.error, source.error_message, source.id),
             )
             conn.commit()
         self.logger.debug(f"Updated source ID: {source.id}")

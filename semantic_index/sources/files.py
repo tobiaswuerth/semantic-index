@@ -37,9 +37,11 @@ class FileSourceHandler(SourceHandler):
                     uri=self.scheme + path.replace("\\", "/"),
                     last_modified=last_modified,
                     last_processed=None,
+                    error=False,
+                    error_message=None,
                 )
 
-    def _read_source(self, source: Source) -> str | None:
+    def _read_source(self, source: Source) -> str:
         ext = os.path.splitext(source.uri)[1]
         reader = self.extensions[ext]
         path = source.uri[len(self.scheme) :]
