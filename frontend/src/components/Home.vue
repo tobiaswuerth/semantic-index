@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
+import { semanticSearch } from '../services/repository'
 
-defineProps<{
-}>()
+const showError = inject('showError')
+console.log(showError)
 
 const searchQuery = ref('');
 const loading = ref(false);
 
-const handleSearch = async () => {
+const handleSearch = () => {
   if (!searchQuery.value.trim()) return;
 
   loading.value = true;
-  try {
-    // Your search logic will go here
-    // For demonstration, we'll add a timeout to simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Searching for:', searchQuery.value);
-    // Additional search logic to be added later
-  } catch (error) {
-    console.error('Search failed:', error);
-  } finally {
-    loading.value = false;
-  }
+  semanticSearch(searchQuery.value, 5)
+    .then(results => {
+      console.log('Semantic search results:', results);
+    })
+    .catch(error => {
+      showError(`Error during search: ${error.message}`);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 };
 
 const handleKeyUp = (event: KeyboardEvent) => {
@@ -32,8 +32,7 @@ const handleKeyUp = (event: KeyboardEvent) => {
 </script>
 
 <template>
-  <div class="flex-1 flex align-items-center">
-
+  <InputGroup>
     <FloatLabel variant="on" class="w-full">
       <InputText id="on_label" v-model="searchQuery" class="w-full p-inputtext-lg" @keyup="handleKeyUp"
         :disabled="loading" />
@@ -43,7 +42,7 @@ const handleKeyUp = (event: KeyboardEvent) => {
     <Button icon="pi pi-search" @click="handleSearch" severity="contrast" class="p-button-lg" :loading="loading"
       :disabled="loading || !searchQuery.trim()" raised label="Search">
     </Button>
-  </div>
+  </InputGroup>
 </template>
 
 <style scoped></style>

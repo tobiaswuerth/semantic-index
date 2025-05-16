@@ -1,17 +1,16 @@
 import './style.css'
-import 'primeflex/primeflex.css';
-import 'primeicons/primeicons.css';
 
 import { createApp } from 'vue'
 import App from './App.vue'
-import PrimeVue from 'primevue/config';
-import Aura from '@primeuix/themes/nora';
-
 const app = createApp(App)
 
+import 'primeflex/primeflex.css';
+import 'primeicons/primeicons.css';
+import PrimeVue from 'primevue/config';
+import Nora from '@primeuix/themes/nora';
 app.use(PrimeVue, {
     theme: {
-        preset: Aura
+        preset: Nora
     },
     ripple: true,
 });

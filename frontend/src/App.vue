@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import { provide } from 'vue'
 import Home from './components/Home.vue'
+import ErrorOverlay from './components/ErrorOverlay.vue'
+
+provide('showError', ErrorOverlay.showError)
 </script>
 
 <template>
+  <ErrorOverlay />
   <div class="m-5 p-5 rounded-lg" style="background-color: var(--p-stone-50);">
     <div class="flex items-center mb-4 pb-3" style="border-bottom: 1px solid var(--p-stone-200);">
       <img src="/icon.png" alt="Logo" height="50" class="mr-0" />
@@ -12,9 +17,4 @@ import Home from './components/Home.vue'
   </div>
 </template>
 
-<style scoped>
-.logo {
-  max-height: 40px;
-  width: auto;
-}
-</style>
+<style scoped></style>

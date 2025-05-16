@@ -9,10 +9,17 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     Button: typeof import('primevue/button')['default']
+    ConfirmDialog: typeof import('primevue/confirmdialog')['default']
+    copy: typeof import('./src/components/Home copy.vue')['default']
+    Dialog: typeof import('primevue/dialog')['default']
+    ErrorOverlay: typeof import('./src/components/ErrorOverlay.vue')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     Home: typeof import('./src/components/Home.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']
+    InputGroup: typeof import('primevue/inputgroup')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
     InputText: typeof import('primevue/inputtext')['default']
+    StatusOverlay: typeof import('./src/components/StatusOverlay.vue')['default']
+    Toast: typeof import('primevue/toast')['default']
   }
 }
