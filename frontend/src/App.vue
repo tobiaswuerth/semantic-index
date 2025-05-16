@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { provide } from 'vue'
 import Home from './components/Home.vue'
 import ErrorOverlay from './components/ErrorOverlay.vue'
-
-provide('showError', ErrorOverlay.showError)
 </script>
 
 <template>

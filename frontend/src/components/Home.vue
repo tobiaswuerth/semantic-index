@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref } from 'vue'
 import { semanticSearch } from '../services/repository'
-
-const showError = inject('showError')
-console.log(showError)
+import { showError } from '../services/error-handling';
 
 const searchQuery = ref('');
 const loading = ref(false);
@@ -16,9 +14,7 @@ const handleSearch = () => {
     .then(results => {
       console.log('Semantic search results:', results);
     })
-    .catch(error => {
-      showError(`Error during search: ${error.message}`);
-    })
+    .catch(showError)
     .finally(() => {
       loading.value = false;
     });
