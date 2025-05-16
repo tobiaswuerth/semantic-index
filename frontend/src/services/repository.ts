@@ -1,23 +1,16 @@
-
 export interface Source {
     id: number;
     uri: string;
-    lastModified: string;
-    lastProcessed: string | null;
-    error: boolean;
-    errorMessage: string | null;
-}
-
-export interface KnnMatchDetails {
-    embedding_id: number;
-    similarity: number;
+    last_modified: string;
+    last_processed: string | null;
+    error: number;
+    error_message: string | null;
 }
 
 export interface KnnSearchResult {
     source: Source;
-    matches: KnnMatchDetails[];
+    similarity: number;
 }
-
 
 const API_BASE_URL = 'http://localhost:5000';
 
