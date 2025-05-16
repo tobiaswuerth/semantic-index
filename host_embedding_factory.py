@@ -1,63 +1,31 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import json
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import traceback
 
 from semantic_index import GTEEmbeddingModel
 
-
 embedding_model: GTEEmbeddingModel = GTEEmbeddingModel()
+app = FastAPI()
 
 
-class EmbeddingFactoryRequestHandler(BaseHTTPRequestHandler):
-    def _send_response(self, code, message):
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(message).encode())
-
-    def _send_error(self, code, message):
-        self._send_response(code, {"error": message})
-
-    def do_POST(self):
-        try:
-            if self.path != "/generate_embedding":
-                return self._send_error(404, "Endpoint not found")
-
-            content_type = self.headers.get("Content-Type", "")
-            if content_type != "application/json":
-                return self._send_error(400, "Content-Type must be application/json")
-
-            # Parse JSON body
-            content_length = int(self.headers.get("Content-Length", 0))
-            post_data = self.rfile.read(content_length).decode("utf-8")
-            try:
-                data = json.loads(post_data)
-            except json.JSONDecodeError:
-                return self._send_error(400, "Invalid JSON format")
-
-            batch = data.get("batch", "")
-            if not batch:
-                return self._send_error(400, "Missing 'batch' field in JSON")
-
-            embeddings = embedding_model._encode_batch(batch)
-            return self._send_response(200, embeddings.tolist())
-        except Exception as e:
-            print(f"Error: {e}")
-            print(traceback.format_exc())
-            return self._send_error(500, "Internal Server Error")
+class EmbeddingRequest(BaseModel):
+    batch: list[str]
 
 
-def run_server():
-    host = "0.0.0.0"
-    port = 8000
-    httpd = HTTPServer((host, port), EmbeddingFactoryRequestHandler)
-    print(f"Starting embedding server at http://{host}:{port}")
+@app.post("/generate_embedding")
+async def generate_embedding(request: EmbeddingRequest):
     try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\nShutting down server")
-        httpd.server_close()
+        if not request.batch:
+            raise HTTPException(status_code=400, detail="Missing 'batch' field in JSON")
+        embeddings = embedding_model._encode_batch(request.batch)
+        return JSONResponse(content=embeddings.tolist())
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-if __name__ == "__main__":
-    run_server()
+# To run: uvicorn host_embedding_factory:app --host 0.0.0.0 --port 8000

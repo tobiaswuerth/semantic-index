@@ -4,7 +4,7 @@ numpy
 scipy
 torch
 transformers
-
+fastapi[standard]
 PyMuPDF
 python-docx
 extract_msg
