@@ -31,10 +31,7 @@ class SearchKnnByQueryRequest(BaseModel):
 @app.post("/api/search_knn_by_query")
 @exception_handled_json_api
 async def search_knn_by_query(request: SearchKnnByQueryRequest):
-    results = manager.find_knn(request.query, request.limit)
-    return json.dumps(
-        results, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o
-    )
+    return manager.find_knn(request.query, request.limit)
 
 
 # To run: uvicorn backend:app --host 0.0.0.0 --port 5000

@@ -55,44 +55,33 @@ class Manager:
     def find_knn(self, query: str, k: int = 5):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
 
+        print("Finding nearest neighbors...")
         # get embeddings
         query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
 
         # Cosine similarity calculation (normalized dot product)
+        print("Calculating cosine similarities...")
         similarities = np.dot(all_embeddings, query_embedding)
         norms = np.linalg.norm(all_embeddings, axis=1) * np.linalg.norm(query_embedding)
         similarities = similarities / norms
-        top_indices = np.argsort(similarities)[-k:][::-1]
+        top_indices = np.argsort(similarities)[::-1]  # Sort all in descending order
 
         # Print the top k results
+        print("Top k results...")
         results = {}
-
         for idx in top_indices:
             embedding = self.index.embeddings[idx]
             source = self.index.source_by_id[embedding.source_id]
+            
             if source.id not in results:
                 results[source.id] = {
-                    "source": source,
-                    "matches": [
-                        {
-                            "embedding_id": embedding.id,
-                            "similarity": similarities[idx],
-                        }
-                    ],
+                    "source": source.to_dict(),
+                    "similarity": similarities[idx],
                 }
-            else:
-                if len(results[source.id]["matches"]) < 5:
-                    results[source.id]["matches"].append(
-                        {
-                            "embedding_id": embedding.id,
-                            "similarity": similarities[idx],
-                        }
-                    )
-
-            if len(results) == k and all(
-                len(results[source_id]["matches"]) == 5 for source_id in results
-            ):
+            
+            if len(results) >= k:
                 break
 
+        print('done')
         return list(results.values())
