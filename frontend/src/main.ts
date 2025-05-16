@@ -1,22 +1,19 @@
+import './style.css'
+import 'primeflex/primeflex.css';
+import 'primeicons/primeicons.css';
+
 import { createApp } from 'vue'
 import App from './App.vue'
-
 import PrimeVue from 'primevue/config';
-import Aura from '@primeuix/themes/aura';
+import Aura from '@primeuix/themes/nora';
 
 const app = createApp(App)
 
 app.use(PrimeVue, {
     theme: {
-        preset: Aura,
-        options: {
-            prefix: 'p',
-            darkModeSelector: true,//'system',
-            cssLayer: false
-        },
+        preset: Aura
     },
     ripple: true,
-    inputStyle: 'filled',
 });
 
 app.mount('#app')
