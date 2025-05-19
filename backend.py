@@ -19,7 +19,7 @@ app.add_middleware(
 
 class SearchKnnByQueryRequest(BaseModel):
     query: str
-    limit: int = Field(default=5, ge=1, le=100)
+    limit: int = Field(default=10, ge=1, le=100)
 
     @field_validator("query")
     def query_not_empty(cls, v):
@@ -32,6 +32,14 @@ class SearchKnnByQueryRequest(BaseModel):
 @exception_handled_json_api
 async def search_knn_by_query(request: SearchKnnByQueryRequest):
     return manager.find_knn(request.query, request.limit)
+
+
+@app.get("/api/read_content_by_embedding_id/{embedding_id}")
+@exception_handled_json_api
+async def read_content_by_embedding_id(embedding_id: int):
+    if not isinstance(embedding_id, int) or embedding_id <= 0:
+        raise ValueError("Invalid embedding ID")
+    return manager.read_content_by_embedding_id(embedding_id)
 
 
 # To run: uvicorn backend:app --host 0.0.0.0 --port 5000

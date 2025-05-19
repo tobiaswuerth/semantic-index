@@ -155,7 +155,7 @@ class Index:
             conn.commit()
         self.logger.debug(f"Inserted {len(embeddings)} embeddings into the database")
 
-    def delete_embeddings(self, source: Source):
+    def delete_embeddings_by_source(self, source: Source):
         assert source.id is not None, "Source ID must be set"
         self.logger.debug(f"Deleting embeddings for source ID: {source.id}")
         with self._get_connection() as conn:
@@ -183,3 +183,52 @@ class Index:
             )
             conn.commit()
         self.logger.debug(f"Updated source ID: {source.id}")
+
+    def get_embedding_by_id(self, embedding_id: int) -> Embedding | None:
+        self.logger.debug(f"Getting embedding by ID: {embedding_id}")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, source_id, embedding, section_from, section_to FROM embeddings WHERE id = ?",
+                (embedding_id,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                self.logger.debug(f"Embedding ID {embedding_id} not found")
+                return None
+
+            embedding = np.frombuffer(row[2], dtype=np.float16)
+            return Embedding(
+                id=row[0],
+                source_id=row[1],
+                embedding=embedding,
+                section_from=row[3],
+                section_to=row[4],
+            )
+
+    def get_source_by_embedding_id(self, embedding_id: int) -> Source | None:
+        self.logger.debug(f"Getting source by embedding ID: {embedding_id}")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT sources.id, uri, last_modified, last_processed, error, error_message 
+                FROM sources 
+                JOIN embeddings ON sources.id = embeddings.source_id 
+                WHERE embeddings.id = ?
+                """,
+                (embedding_id,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                self.logger.debug(f"Source for embedding ID {embedding_id} not found")
+                return None
+
+            return Source(
+                id=row[0],
+                uri=row[1],
+                last_modified=row[2],
+                last_processed=row[3],
+                error=row[4],
+                error_message=row[5],
+            )

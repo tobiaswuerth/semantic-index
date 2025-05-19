@@ -15,5 +15,6 @@ declare module 'vue' {
     Home: typeof import('./src/components/Home.vue')['default']
     InputGroup: typeof import('primevue/inputgroup')['default']
     InputText: typeof import('primevue/inputtext')['default']
+    ProgressSpinner: typeof import('primevue/progressspinner')['default']
   }
 }
