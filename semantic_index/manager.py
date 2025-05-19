@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import tqdm
+from sklearn.neighbors import NearestNeighbors
 
 from .embeddings import EmbeddingFactory
 from .index import Index
@@ -59,29 +60,23 @@ class Manager:
         # get embeddings
         query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
-
-        # Cosine similarity calculation (normalized dot product)
-        print("Calculating cosine similarities...")
-        similarities = np.dot(all_embeddings, query_embedding)
-        norms = np.linalg.norm(all_embeddings, axis=1) * np.linalg.norm(query_embedding)
-        similarities = similarities / norms
-        top_indices = np.argsort(similarities)[::-1]  # Sort all in descending order
-
-        # Print the top k results
+        
+        print("Using sklearn KNN to find neighbors...")
+        knn = NearestNeighbors(n_neighbors=k, metric='cosine')
+        knn.fit(all_embeddings)
+        distances, indices = knn.kneighbors([query_embedding], n_neighbors=k)
+        similarities = 1 - distances[0]
+        
         print("Top k results...")
-        results = {}
-        for idx in top_indices:
+        results = []
+        for i, idx in enumerate(indices[0]):
             embedding = self.index.embeddings[idx]
             source = self.index.source_by_id[embedding.source_id]
             
-            if source.id not in results:
-                results[source.id] = {
-                    "source": source.to_dict(),
-                    "similarity": similarities[idx],
-                }
-            
-            if len(results) >= k:
-                break
-
+            results.append({
+                "source": source.to_dict(),
+                "similarity": float(similarities[i]),
+            })
+        
         print('done')
-        return list(results.values())
+        return results

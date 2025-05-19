@@ -2,6 +2,7 @@ pyyaml
 tqdm
 numpy
 scipy
+scikit-learn
 torch
 transformers
 fastapi[standard]
