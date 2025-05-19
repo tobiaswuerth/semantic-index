@@ -2,6 +2,8 @@
 
 Create a searchable semantic index to find documents and sites.
 
+![image](https://github.com/user-attachments/assets/eab28a58-bc28-45f9-8fe3-80d8c4e5b334)
+
 # Setup
 
 Clone the repository:
