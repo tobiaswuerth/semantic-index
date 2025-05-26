@@ -6,7 +6,7 @@ Create a searchable semantic index to find documents and sites.
 
 **Note:**
 - This is only a proof of concept. Tested on Windows.
-- Currently only supports for indexing the file system. It should, however, be easily extensible to other source types, e.g. crawling a wiki.
+- Currently only supports indexing the file system. It should, however, be easily extensible to other source types, e.g. crawling a wiki.
 - When processing large amounts of data, it is advisable to have a GPU with CUDA support.
 
 # Usage
