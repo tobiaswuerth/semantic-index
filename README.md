@@ -4,6 +4,11 @@ Create a searchable semantic index to find documents and sites.
 
 ![image](https://github.com/user-attachments/assets/eab28a58-bc28-45f9-8fe3-80d8c4e5b334)
 
+**Note:**
+- This is only a proof of concept. Tested on Windows.
+- Currently only supports for indexing the file system. It should, however, be easily extensible to other source types, e.g. crawling a wiki.
+- When processing large amounts of data, it is advisable to have a GPU with CUDA support.
+
 # Usage
 
 ```
