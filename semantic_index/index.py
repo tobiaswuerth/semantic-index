@@ -133,7 +133,7 @@ class Index:
                     conn.commit()
                     self.logger.debug(f"Inserted {si + 1} sources into the database...")
             conn.commit()
-        self.logger.info(f"Inserted {si} sources into the database")
+        self.logger.info(f"Inserted {si + 1} sources into the database")
 
     def create_embeddings(self, embeddings: List[Embedding]):
         self.logger.debug("Creating embeddings in the database...")

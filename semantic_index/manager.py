@@ -60,18 +60,18 @@ class Manager:
     def find_knn(self, query: str, k: int = 10):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
 
-        print("Finding nearest neighbors...")
+        self.logger.debug("Finding nearest neighbors...")
         # get embeddings
         query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
 
-        print("Using sklearn KNN to find neighbors...")
+        self.logger.debug("Using sklearn KNN to find neighbors...")
         knn = NearestNeighbors(n_neighbors=k, metric="cosine")
         knn.fit(all_embeddings)
         distances, indices = knn.kneighbors([query_embedding], n_neighbors=k)
         similarities = 1 - distances[0]
 
-        print("Top k results...")
+        self.logger.debug("Top k results...")
         results = []
         for i, idx in enumerate(indices[0]):
             embedding: Embedding = self.index.embeddings[idx]
@@ -85,7 +85,7 @@ class Manager:
                 }
             )
 
-        print("done")
+        self.logger.debug("done")
         return results
 
     def read_content_by_embedding_id(self, embedding_id: int) -> dict:
