@@ -21,13 +21,13 @@ const {
           <div v-if="!!icon" class="popup-icon">
             <i :class="icon"></i>
           </div>
-          <h4 style="flex-grow: 1;">{{ $t(title) }}</h4>
+          <h4 style="flex-grow: 1;">{{ title }}</h4>
           <Button v-if="isClosable" icon="pi pi-times" text class="p-button-sm" @click="closePopup"
             severity="contrast" />
         </div>
         <template v-if="!!message">
           <div class="popup-message">
-            {{ $t(message) }}
+            {{ message }}
           </div>
         </template>
       </div>
