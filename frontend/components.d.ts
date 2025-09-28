@@ -8,13 +8,16 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppToolbar: typeof import('./src/components/AppToolbar.vue')['default']
     Button: typeof import('primevue/button')['default']
     Dialog: typeof import('primevue/dialog')['default']
-    ErrorOverlay: typeof import('./src/components/ErrorOverlay.vue')['default']
-    FloatLabel: typeof import('primevue/floatlabel')['default']
-    Home: typeof import('./src/components/Home.vue')['default']
-    InputGroup: typeof import('primevue/inputgroup')['default']
-    InputText: typeof import('primevue/inputtext')['default']
-    ProgressSpinner: typeof import('primevue/progressspinner')['default']
+    Divider: typeof import('primevue/divider')['default']
+    Drawer: typeof import('primevue/drawer')['default']
+    Menu: typeof import('primevue/menu')['default']
+    RouterLink: typeof import('vue-router')['RouterLink']
+    RouterView: typeof import('vue-router')['RouterView']
+    StatusPopup: typeof import('./src/components/StatusPopup.vue')['default']
+    ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+    Toolbar: typeof import('primevue/toolbar')['default']
   }
 }

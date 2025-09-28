@@ -1,18 +1,29 @@
-import './style.css'
+import './assets/main.css'
 
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+
+import PrimeVue from 'primevue/config'
+import PrimeTheme from '@primeuix/themes/aura'
+import PrimeToast from 'primevue/toastservice'
+
 import App from './App.vue'
+import router from './router.ts'
+
 const app = createApp(App)
 
-import 'primeflex/primeflex.css';
-import 'primeicons/primeicons.css';
-import PrimeVue from 'primevue/config';
-import Nora from '@primeuix/themes/nora';
+
+app.use(createPinia())
+app.use(router)
+
 app.use(PrimeVue, {
-    theme: {
-        preset: Nora
+  theme: {
+    preset: PrimeTheme,
+    options: {
+      darkModeSelector: '.dark',
     },
-    ripple: true,
-});
+  },
+})
+app.use(PrimeToast)
 
 app.mount('#app')

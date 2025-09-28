@@ -1,0 +1,16 @@
+{
+  "name": "Semantic Index",
+  "short_name": "Semantic Index",
+  "description": "A modern search engine for your knowledge base.",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/"
+}
