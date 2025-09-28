@@ -54,7 +54,7 @@ const { showLoading, closePopup, showError } = usePopup()
 const { isLoading: isContentLoading, getContent, loadContent } = useContentLoader()
 
 const BASE_API = 'http://localhost:5000'
-const limit = 10
+const limit = 25
 
 const searchQuery = ref('')
 const searchResults = ref<KnnSearchResult[]>([])
