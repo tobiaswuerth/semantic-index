@@ -90,14 +90,13 @@ const handleSearch = async () => {
         collapsedState[result.embedding_id] = true
       }
     })
-
+    closePopup()
   } catch (err: unknown) {
     searchResults.value = []
     const msg = err instanceof Error ? err.message : String(err)
-    showError('Search failed', msg)
+    showError('Search failed', msg, true)
   } finally {
     isSearching.value = false
-    closePopup()
   }
 }
 
