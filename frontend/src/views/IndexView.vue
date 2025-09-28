@@ -209,6 +209,7 @@ onMounted(() => {
   flex-shrink: 0;
   width: 80px;
   text-align: left;
+  margin: 0 0.5rem 0 1rem;
 }
 
 .loading-container {
