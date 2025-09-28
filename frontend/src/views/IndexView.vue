@@ -175,6 +175,7 @@ onMounted(() => {
   display: flex;
   justify-content: center;
 }
+
 .result-item {
   margin-bottom: 0.2rem;
 }
