@@ -31,8 +31,7 @@ class EmbeddingFactory:
                 id=None,
                 source_id=source.id,
                 embedding=embedding,
-                section_from=chunk.start,
-                section_to=chunk.end,
+                chunk_idx=chunk.idx,
             )
             for chunk, embedding in zip(chunks, embeddings)
         ]

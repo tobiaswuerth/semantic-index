@@ -47,8 +47,7 @@ class Index:
                         id INTEGER PRIMARY KEY,
                         source_id INTEGER NOT NULL,
                         embedding BLOB NOT NULL,
-                        section_from INTEGER NOT NULL,
-                        section_to INTEGER NOT NULL,
+                        chunk_idx INTEGER NOT NULL,
                         FOREIGN KEY (source_id) REFERENCES sources (id)
                     )"""
             )
@@ -88,7 +87,7 @@ class Index:
 
             self.logger.info("Loading database embeddings...")
             cursor.execute(
-                "SELECT id, source_id, embedding, section_from, section_to FROM embeddings"
+                "SELECT id, source_id, embedding, chunk_idx FROM embeddings"
             )
             self.embeddings = []
             for row in cursor.fetchall():
@@ -98,8 +97,7 @@ class Index:
                         id=row[0],
                         source_id=row[1],
                         embedding=embedding,
-                        section_from=row[3],
-                        section_to=row[4],
+                        chunk_idx=row[3],
                     )
                 )
 
@@ -142,14 +140,13 @@ class Index:
 
             for embedding in embeddings:
                 cursor.execute(
-                    """ INSERT INTO embeddings (source_id, embedding, section_from, section_to)
-                        VALUES (?, ?, ?, ?)
+                    """ INSERT INTO embeddings (source_id, embedding, chunk_idx)
+                        VALUES (?, ?, ?)
                     """,
                     (
                         embedding.source_id,
                         embedding.embedding.astype(np.float16).tobytes(),
-                        embedding.section_from,
-                        embedding.section_to,
+                        embedding.chunk_idx,
                     ),
                 )
             conn.commit()
@@ -189,7 +186,7 @@ class Index:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, source_id, embedding, section_from, section_to FROM embeddings WHERE id = ?",
+                "SELECT id, source_id, embedding, chunk_idx FROM embeddings WHERE id = ?",
                 (embedding_id,),
             )
             row = cursor.fetchone()
@@ -202,8 +199,7 @@ class Index:
                 id=row[0],
                 source_id=row[1],
                 embedding=embedding,
-                section_from=row[3],
-                section_to=row[4],
+                chunk_idx=row[3],
             )
 
     def get_source_by_embedding_id(self, embedding_id: int) -> Source | None:

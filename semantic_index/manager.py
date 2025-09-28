@@ -4,7 +4,7 @@ import tqdm
 from sklearn.neighbors import NearestNeighbors
 from fastapi import HTTPException
 
-from .embeddings import EmbeddingFactory
+from .embeddings import EmbeddingFactory, chunk_text
 from .index import Index
 from .sources import Resolver, SourceHandler, FileSourceHandler
 from .models import Embedding, Source
@@ -97,6 +97,7 @@ class Manager:
 
         handler: SourceHandler = self.resolver.find_for(source)
         content = handler.read(source)
+        chunks = chunk_text(content)
         return {
-            "section": content[embedding.section_from : embedding.section_to],
+            "section": chunks[embedding.chunk_idx].text,
         }

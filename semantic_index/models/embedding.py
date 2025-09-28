@@ -8,5 +8,4 @@ class Embedding:
     id: Optional[int]
     source_id: int
     embedding: np.ndarray
-    section_from: int
-    section_to: int
+    chunk_idx: int
