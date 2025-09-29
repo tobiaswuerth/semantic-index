@@ -1,108 +1,67 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { usePopup } from '@/composables/usePopup'
-
-interface Source {
-  id: number
-  uri: string
-  last_modified: string
-  last_processed: string | null
-  error: number
-  error_message: string | null
-}
-
-interface KnnSearchResult {
-  embedding_id: number
-  similarity: number
-  source: Source
-}
-
-function useContentLoader() {
-  const loadingState = reactive<Record<number, boolean>>({})
-  const contentCache = reactive<Record<number, string>>({})
-  const { showError } = usePopup()
-
-  const isLoading = (id: number) => !!loadingState[id]
-  const getContent = (id: number) => contentCache[id] || ''
-
-  async function loadContent(embeddingId: number) {
-    if (contentCache[embeddingId] || loadingState[embeddingId]) {
-      return
-    }
-
-    loadingState[embeddingId] = true
-    try {
-      const resp = await fetch(`${BASE_API}/api/read_content_by_embedding_id/${embeddingId}`)
-      if (!resp.ok) {
-        throw new Error((await resp.text()) || `Failed to load content: ${resp.status}`)
-      }
-      const data = await resp.json()
-      contentCache[embeddingId] = data.section || 'Content is not available or empty.'
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      showError('Load content failed', msg, true)
-      contentCache[embeddingId] = 'Error: Could not load content.'
-    } finally {
-      loadingState[embeddingId] = false
-    }
-  }
-
-  return { isLoading, getContent, loadContent }
-}
+import { searchKnnChunksByQuery, getContentByEmbeddingId } from '@/composables/useAPI'
+import type { KnnSearchResult } from '@/composables/useAPI'
 
 const { showLoading, closePopup, showError } = usePopup()
-const { isLoading: isContentLoading, getContent, loadContent } = useContentLoader()
-
-const BASE_API = 'http://localhost:5000'
-const limit = 25
 
 const searchQuery = ref('')
+const isSearching = ref(false)
 const searchResults = ref<KnnSearchResult[]>([])
 const collapsedState = reactive<Record<number, boolean>>({})
-const isSearching = ref(false)
-const hasSearched = ref(false)
+const loadingState = reactive<Record<number, boolean>>({})
+const contentCache = reactive<Record<number, string>>({})
 
 const handleSearch = async () => {
-  if (!searchQuery.value.trim() || isSearching.value) return
+  if (!searchQuery.value.trim() || isSearching.value) {
+    return;
+  }
 
   isSearching.value = true
-  hasSearched.value = true
   showLoading('Searching...')
   window.history.pushState(null, '', `?q=${encodeURIComponent(searchQuery.value)}`)
 
-  try {
-    const resp = await fetch(`${BASE_API}/api/search_knn_chunks_by_query`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: searchQuery.value, limit }),
+  searchKnnChunksByQuery(searchQuery.value, 20)
+    .then(results => {
+      searchResults.value = results
+
+      results.forEach(result => {
+        if (collapsedState[result.embedding_id] === undefined) {
+          collapsedState[result.embedding_id] = true
+        }
+      })
+      closePopup()
     })
-
-    if (!resp.ok) {
-      throw new Error((await resp.text()) || `Search failed: ${resp.status}`)
-    }
-
-    const results: KnnSearchResult[] = await resp.json() || []
-    searchResults.value = results
-
-    results.forEach(result => {
-      if (collapsedState[result.embedding_id] === undefined) {
-        collapsedState[result.embedding_id] = true
-      }
+    .catch(err => {
+      searchResults.value = []
+      const msg = err instanceof Error ? err.message : String(err)
+      showError('Search failed', msg, true)
     })
-    closePopup()
-  } catch (err: unknown) {
-    searchResults.value = []
-    const msg = err instanceof Error ? err.message : String(err)
-    showError('Search failed', msg, true)
-  } finally {
-    isSearching.value = false
-  }
+    .finally(() => {
+      isSearching.value = false
+    })
 }
 
 const onPanelToggle = (isCollapsed: boolean, embeddingId: number) => {
-  if (!isCollapsed) {
-    loadContent(embeddingId)
+  if (isCollapsed || contentCache[embeddingId] !== undefined || loadingState[embeddingId]) {
+    return;
   }
+
+  loadingState[embeddingId] = true
+  getContentByEmbeddingId(embeddingId)
+    .then(content => {
+      contentCache[embeddingId] = content.section || '<N/A>'
+    })
+    .catch(err => {
+      const msg = err instanceof Error ? err.message : String(err)
+      showError('Load content failed', msg, true)
+      contentCache[embeddingId] = '<Error: Could not load content>'
+    })
+    .finally(() => {
+      loadingState[embeddingId] = false
+    })
+
 }
 
 const getFileName = (uri: string = '') => {
@@ -153,17 +112,17 @@ onMounted(() => {
         </div>
       </template>
 
-      <div v-if="isContentLoading(result.embedding_id)" class="loading-container">
+      <div v-if="loadingState[result.embedding_id]" class="loading-container">
         <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="6" />
       </div>
       <div v-else class="content-preview">
-        {{ getContent(result.embedding_id) }}
+        {{ contentCache[result.embedding_id] }}
       </div>
     </Panel>
   </div>
-  <div v-else-if="hasSearched && !isSearching">
+  <div v-else-if="!isSearching">
     <div style="text-align: center;">
-      <i>No results found for your query</i>
+      <i>No results to display</i>
     </div>
   </div>
 </template>
