@@ -176,6 +176,7 @@ onMounted(() => {
 
 .result-item {
   margin-bottom: 0.2rem;
+  border: 0;
 }
 
 .p-inputgroup.p-inputgroup-lg {
