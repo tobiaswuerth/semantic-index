@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     if args.knn:
         logging.info(f"Finding KNN for query: {args.knn} with k={args.kcount}")
-        results = manager.find_knn(args.knn, k=args.kcount)
+        results = manager.find_knn_chunks(args.knn, k=args.kcount)
         logging.info(f"Top {args.kcount} results for: '{args.knn}'")
         for i, result in enumerate(results, start=1):
             s = result["source"]

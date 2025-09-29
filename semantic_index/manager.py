@@ -57,7 +57,7 @@ class Manager:
         self.logger.info("Finished processing sources.")
         self.index.reload_data()
 
-    def find_knn(self, query: str, k: int = 10):
+    def find_knn_chunks(self, query: str, k: int = 10):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
 
         self.logger.debug("Finding nearest neighbors...")

@@ -68,11 +68,10 @@ const handleSearch = async () => {
   isSearching.value = true
   hasSearched.value = true
   showLoading('Searching...')
-  // add to url
-  window.history.replaceState(null, '', `?q=${encodeURIComponent(searchQuery.value)}`)
+  window.history.pushState(null, '', `?q=${encodeURIComponent(searchQuery.value)}`)
 
   try {
-    const resp = await fetch(`${BASE_API}/api/search_knn_by_query`, {
+    const resp = await fetch(`${BASE_API}/api/search_knn_chunks_by_query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: searchQuery.value, limit }),
