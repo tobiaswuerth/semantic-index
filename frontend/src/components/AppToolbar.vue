@@ -22,9 +22,9 @@ const navigateTo = (path: string) => {
   drawerVisible.value = false
 }
 
-// Replaced static array with computed so labels react to locale changes
 const menuItems = computed(() => [
-  { label: 'Home', icon: 'pi pi-home', command: () => navigateTo('/') },
+  { label: 'Search Chunks', icon: 'pi pi-align-left', command: () => navigateTo('/chunks') },
+  { label: 'Search Documents', icon: 'pi pi-file', command: () => navigateTo('/docs') },
 ])
 
 </script>
@@ -95,6 +95,7 @@ const menuItems = computed(() => [
   font-weight: 600;
   font-size: 1.2rem;
   cursor: pointer;
+  margin-right: 40px;
 }
 
 .p-toolbar-center img {

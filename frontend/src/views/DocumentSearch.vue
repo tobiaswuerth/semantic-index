@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { usePopup } from '@/composables/usePopup'
-import { searchKnnChunksByQuery, getContentByEmbeddingId } from '@/composables/useAPI'
+import { searchKnnDocsByQuery, getContentByEmbeddingId } from '@/composables/useAPI'
 import type { KnnSearchResult } from '@/composables/useAPI'
 import { useRouter } from 'vue-router'
 
@@ -24,7 +24,7 @@ const handleSearch = async () => {
   showLoading('Searching...')
   router.replace({ query: { q: searchQuery.value } })
 
-  searchKnnChunksByQuery(searchQuery.value, 20)
+  searchKnnDocsByQuery(searchQuery.value, 20)
     .then(results => {
       searchResults.value = results
 
@@ -91,7 +91,7 @@ onMounted(() => {
 
 <template>
   <div style="text-align: center; margin-bottom: 1rem;">
-    <h3>Search Chunks</h3>
+    <h3>Search Documents</h3>
   </div>
   <div class="input-group">
     <div class="p-inputgroup p-inputgroup-lg">

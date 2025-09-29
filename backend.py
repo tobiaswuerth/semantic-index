@@ -34,6 +34,12 @@ async def search_knn_chunks_by_query(request: SearchKnnByQueryRequest):
     return manager.find_knn_chunks(request.query, request.limit)
 
 
+@app.post("/api/search_knn_docs_by_query")
+@exception_handled_json_api
+async def search_knn_docs_by_query(request: SearchKnnByQueryRequest):
+    return manager.find_knn_docs(request.query, request.limit)
+
+
 @app.get("/api/read_content_by_embedding_id/{embedding_id}")
 @exception_handled_json_api
 async def read_content_by_embedding_id(embedding_id: int):
