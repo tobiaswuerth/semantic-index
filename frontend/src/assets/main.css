@@ -19,7 +19,7 @@ html.dark {
 main {
   padding: 80px 1rem 2rem;
   min-height: 100vh;
-  background-color: var(--p-card-background);
+  background-color: color-mix(in srgb, var(--p-drawer-background) 50%, transparent);
 }
 
 body {
