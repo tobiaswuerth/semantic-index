@@ -58,6 +58,10 @@ class Manager:
 
     def find_knn_chunks(self, query: str, k: int = 10):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
+        if len(self.index.embeddings) == 0:
+            self.logger.debug("No embeddings in index.")
+            return []
+
         query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
         similarities, indices = get_similarities(query_embedding, all_embeddings)
@@ -81,6 +85,10 @@ class Manager:
 
     def find_knn_docs(self, query: str, k: int = 10):
         self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
+        if len(self.index.embeddings) == 0:
+            self.logger.debug("No embeddings in index.")
+            return []
+
         query_embedding = self.embedding_factory.model.encode([query])[0]
         all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
         similarities, indices = get_similarities(query_embedding, all_embeddings)
