@@ -5,7 +5,7 @@ log_level_file: "DEBUG"
 index_path: "index.sqlite"
 
 embedding_factory:
-  batch_size: 64
+  batch_size: 1
   process_remote: false
   remote_host: "http://192.168.1.109"
   remote_port: 8000
