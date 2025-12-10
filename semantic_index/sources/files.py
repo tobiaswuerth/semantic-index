@@ -6,16 +6,31 @@ import docx
 import extract_msg
 import pymupdf
 
-from ..data.models import Source
-from .handler import SourceHandler
+from ..data import Source
+from .base_handler import BaseSourceHandler
 
 logger = logging.getLogger(__name__)
 
 
-class FileSourceHandler(SourceHandler):
+class FileSourceHandler(BaseSourceHandler):
+    handler_name = "File"
+    source_types = {
+        "TXT": [".txt"],
+        "Markdown": [".md"],
+        "CSV": [".csv"],
+        "Word": [".docx"],
+        "PDF": [".pdf"],
+        "Mail": [".msg"],
+    }
+
     def __init__(self):
-        super().__init__(scheme="file:///")
-        self._readers: dict[str, Callable[[str], str]] = {
+        super().__init__()
+        self.ext_to_name = {
+            ext: type_name
+            for type_name, ext_list in self.source_types.items()
+            for ext in ext_list
+        }
+        self.ext_to_reader = {
             ".txt": self._read_plaintext,
             ".md": self._read_plaintext,
             ".csv": self._read_plaintext,
@@ -24,19 +39,37 @@ class FileSourceHandler(SourceHandler):
             ".msg": self._read_msg,
         }
 
-    def crawl(self, base: str) -> Iterator[Source]:
+    def crawl(self, base: str, **kwargs) -> Iterator[Source]:
+        handler_model = self.get_handler_model()
+        assert handler_model
+
+        assert os.path.isdir(base), f"Base path is not a directory: {base}"
         for root, _, files in os.walk(base):
             for file in files:
                 ext = os.path.splitext(file)[1].lower()
-                if ext not in self._readers:
+                if ext not in self.ext_to_name:
+                    logger.debug(f"Skipping file with unsupported extension: {file}")
                     continue
 
+                type_name = self.ext_to_name[ext]
+                type_model = self.get_type_model(type_name)
+                assert type_model
+
                 path = os.path.join(root, file)
-                last_modified = datetime.fromtimestamp(os.path.getmtime(path))
+                stat = os.stat(path)
+                obj_created = datetime.fromtimestamp(stat.st_birthtime)
+                obj_modified = datetime.fromtimestamp(stat.st_mtime)
+
+                logger.debug(f"Yield file: {path}")
                 yield Source(
                     id=None,
-                    uri=self.scheme + path.replace("\\", "/"),
-                    last_modified=last_modified,
+                    source_handler_id=handler_model.id,
+                    source_type_id=type_model.id,
+                    uri=path,
+                    resolved_to=None,
+                    title=None,
+                    obj_created=obj_created,
+                    obj_modified=obj_modified,
                     last_processed=None,
                     error=False,
                     error_message=None,
@@ -44,9 +77,9 @@ class FileSourceHandler(SourceHandler):
 
     def _read_source(self, source: Source) -> str:
         ext = os.path.splitext(source.uri)[1].lower()
-        reader = self._readers[ext]
-        path = source.uri[len(self.scheme) :]
-        return reader(path)
+        assert ext in self.ext_to_reader
+        reader = self.ext_to_reader[ext]
+        return reader(source.uri)
 
     @staticmethod
     def _read_plaintext(path: str) -> str:
@@ -56,12 +89,12 @@ class FileSourceHandler(SourceHandler):
     @staticmethod
     def _read_docx(path: str) -> str:
         doc = docx.Document(path)
-        return "\n".join(para.text for para in doc.paragraphs)
+        return "\n".join([para.text for para in doc.paragraphs])
 
     @staticmethod
     def _read_pdf(path: str) -> str:
         doc = pymupdf.open(path)
-        return "".join(page.get_text() for page in doc)
+        return "".join([str(page.get_text()) for page in doc])
 
     @staticmethod
     def _read_msg(path: str) -> str:

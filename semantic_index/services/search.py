@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 import numpy as np
 
-from ..data.models import Embedding, Source
+from ..data import Embedding, Source
 from ..embeddings.model import BaseEmbeddingModel
 from ..embeddings.utils import get_similarities
 
@@ -37,15 +37,6 @@ class SearchService:
             else np.array([])
         )
 
-    def update_data(
-        self,
-        embeddings: list[Embedding],
-        source_lookup: dict[int, Source],
-    ) -> None:
-        self._embeddings = embeddings
-        self._source_lookup = source_lookup
-        self._embedding_matrix = None
-
     def search_chunks(self, query: str, k: int = 10) -> list[SearchResult]:
         if not self._embeddings:
             return []
@@ -54,8 +45,9 @@ class SearchService:
         emb_matrix = self._get_embedding_matrix()
         similarities, indices = get_similarities(query_emb, emb_matrix)
 
-        results = []
-        for idx in indices[:k]:
+        results: list[SearchResult] = []
+        top_indices: list[int] = indices[:k].tolist()
+        for idx in top_indices:
             emb = self._embeddings[idx]
             source = self._source_lookup.get(emb.source_id)
             if source:
@@ -77,8 +69,9 @@ class SearchService:
         similarities, indices = get_similarities(query_emb, emb_matrix)
 
         seen_sources: set[int] = set()
-        results = []
-        for idx in indices:
+        results: list[SearchResult] = []
+        all_indices: list[int] = indices.tolist()
+        for idx in all_indices:
             if len(results) >= k:
                 break
             emb = self._embeddings[idx]

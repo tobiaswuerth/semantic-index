@@ -2,11 +2,18 @@ import logging
 from typing import Iterator
 
 from .api.schemas import ContentSchema, SearchResultSchema, SourceSchema
-from .data import EmbeddingRepository, SourceRepository, init_db
-from .data.models import Source
+from .data import (
+    EmbeddingRepository,
+    SourceHandlerRepository,
+    SourceRepository,
+    SourceTypeRepository,
+    init_db,
+)
+from .data import Source
 from .embeddings import EmbeddingFactory
 from .services import ProcessingService, SearchService
 from .sources import FileSourceHandler, Resolver
+from .sources.base_handler import BaseSourceHandler
 
 
 class Manager:
@@ -16,9 +23,14 @@ class Manager:
 
         self._source_repo = SourceRepository()
         self._embedding_repo = EmbeddingRepository()
+        self._handler_repo = SourceHandlerRepository()
+        self._type_repo = SourceTypeRepository()
         self._embedding_factory = EmbeddingFactory()
 
-        self._resolver = Resolver()
+        self._resolver = Resolver(
+            handler_repo=self._handler_repo,
+            type_repo=self._type_repo,
+        )
         self._resolver.register(FileSourceHandler())
 
         self._processing_service = ProcessingService(
@@ -95,3 +107,6 @@ class Manager:
 
         content = self._processing_service.read_chunk_content(source, emb.chunk_idx)
         return ContentSchema(section=content)
+
+    def get_handler(self, name: str) -> "BaseSourceHandler | None":
+        return self._resolver.get_handler_by_name(name)

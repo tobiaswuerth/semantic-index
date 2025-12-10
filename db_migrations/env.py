@@ -8,7 +8,7 @@ if alembic_config.config_file_name is not None:
     fileConfig(alembic_config.config_file_name)
 
 from semantic_index.data.database import Base, get_engine
-from semantic_index.data.models import *
+from semantic_index.data import Embedding, Source, SourceHandler, SourceType
 
 target_metadata = Base.metadata
 

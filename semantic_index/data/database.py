@@ -1,6 +1,6 @@
 import logging
-from contextlib import contextmanager
-from typing import Generator
+from contextlib import AbstractContextManager, contextmanager
+from typing import Callable, Generator
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -9,6 +9,7 @@ from ..config import config
 
 logger = logging.getLogger(__name__)
 Base = declarative_base()
+SessionFactory = Callable[[], AbstractContextManager[Session]]
 
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
@@ -37,7 +38,10 @@ def get_session_factory() -> sessionmaker[Session]:
 
 
 def init_db() -> None:
-    from .models import Embedding, Source  # noqa: F401
+    from .embedding import Embedding  # noqa: F401
+    from .source import Source  # noqa: F401
+    from .source_handler import SourceHandler  # noqa: F401
+    from .source_type import SourceType  # noqa: F401
 
     logger.info("Initializing database...")
     Base.metadata.create_all(bind=get_engine())

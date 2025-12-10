@@ -5,7 +5,6 @@ import sys
 from datetime import datetime
 
 from semantic_index import Manager, config
-from semantic_index.sources import FileSourceHandler
 
 
 def init_logging():
@@ -36,8 +35,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ingest",
         "-i",
-        metavar="PATH",
-        help="Ingest sources from the specified path",
+        nargs=2,
+        metavar=("HANDLER", "SOURCE"),
+        help="Ingest sources using the specified handler and source (e.g., -i file /path/to/folder, -i jira https://my.url/api)",
     )
 
     parser.add_argument(
@@ -62,6 +62,15 @@ if __name__ == "__main__":
         help="Number of results to return for KNN search (default: 5)",
     )
 
+    parser.add_argument(
+        "--arg",
+        "-a",
+        action="append",
+        metavar="KEY=VALUE",
+        default=[],
+        help="Handler-specific arguments as key=value pairs (can be used multiple times, e.g., -a key=my_api_key -a project=MYPROJ)",
+    )
+
     args = parser.parse_args()
     if not (args.ingest or args.process or args.knn):
         logging.error(parser.format_help())
@@ -69,15 +78,29 @@ if __name__ == "__main__":
 
     logging.info("Starting Semantic Index Manager...")
     manager = Manager()
-    file_handler = FileSourceHandler()
     logging.info("Initialized Semantic Index Manager")
     logging.info("-" * 40)
 
     if args.ingest:
-        logging.info(f"Ingesting sources from: {args.ingest}")
-        sources = file_handler.crawl(args.ingest)
+        handler_name, source_path = args.ingest
+        logging.info(f"Ingesting sources using handler '{handler_name}' from: {source_path}")
+        handler = manager.get_handler(handler_name)
+        if handler is None:
+            logging.error(f"Handler '{handler_name}' not registered")
+            sys.exit(1)
+
+        # Parse handler-specific arguments
+        handler_args = {}
+        for arg in args.arg:
+            if "=" not in arg:
+                logging.error(f"Invalid argument format: '{arg}'. Expected KEY=VALUE")
+                sys.exit(1)
+            key, value = arg.split("=", 1)
+            handler_args[key] = value
+
+        sources = handler.crawl(source_path, **handler_args)
         manager.ingest_sources(sources)
-        logging.info(f"Ingested sources from {args.ingest}")
+        logging.info(f"Ingested sources from {source_path}")
         logging.info("-" * 40)
 
     if args.process:

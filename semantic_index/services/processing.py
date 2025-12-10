@@ -2,11 +2,10 @@ import logging
 from typing import Iterator
 import tqdm
 
-from ..data.models import Source
+from ..data import Source, EmbeddingRepository, SourceRepository
 from ..embeddings import chunk_text
-from ..data.repository import EmbeddingRepository, SourceRepository
 from ..embeddings.factory import EmbeddingFactory
-from ..sources.handler import SourceHandler
+from ..sources.base_handler import BaseSourceHandler
 from ..sources.resolver import Resolver
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ class ProcessingService:
             s
             for s in sources
             if not s.error
-            and (not s.last_processed or s.last_modified > s.last_processed)
+            and (not s.last_processed or s.obj_modified > s.last_processed)
         ]
         logger.info(f"Found {len(todo)} sources to process")
 
@@ -73,7 +72,7 @@ class ProcessingService:
     def _process_single_source(self, source: Source) -> None:
         self._embedding_repo.delete_by_source_id(source.id)
 
-        handler: SourceHandler = self._resolver.find_for(source)
+        handler: BaseSourceHandler = self._resolver.find_for(source)
         contents = handler.read(source)
 
         if not contents or not contents.strip():
@@ -82,7 +81,7 @@ class ProcessingService:
         embeddings = self._embedding_factory.process(contents, source)
         self._embedding_repo.create_many(embeddings)
 
-        source.last_processed = source.last_modified
+        source.last_processed = source.obj_modified
         self._source_repo.update(source)
 
     def read_chunk_content(self, source: Source, chunk_idx: int) -> str:
