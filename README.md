@@ -134,3 +134,21 @@ run with
 npm run dev
 ```
 this should start a localhost server, e.g. on http://localhost:5173/.
+
+---
+
+# DB Migrations
+
+```powershell
+# Auto-generate a migration after model changes
+alembic revision --autogenerate -m "add title and resolved_to fields"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# Show current version
+alembic current
+```
