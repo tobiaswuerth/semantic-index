@@ -1,35 +1,36 @@
 import logging
-from typing import Generator
 import os
 from datetime import datetime
-import pymupdf
+from typing import Callable, Iterator
 import docx
 import extract_msg
+import pymupdf
 
-from .handler import SourceHandler, Source
+from ..data.models import Source
+from .handler import SourceHandler
+
+logger = logging.getLogger(__name__)
 
 
 class FileSourceHandler(SourceHandler):
-
     def __init__(self):
         super().__init__(scheme="file:///")
-        self.extensions = {
-            ".txt": FileSourceHandler._read_plaintext,
-            ".md": FileSourceHandler._read_plaintext,
-            ".csv": FileSourceHandler._read_plaintext,
-            ".docx": FileSourceHandler._read_docx,
-            ".pdf": FileSourceHandler._read_pdf,
-            ".msg": FileSourceHandler._read_msg,
+        self._readers: dict[str, Callable[[str], str]] = {
+            ".txt": self._read_plaintext,
+            ".md": self._read_plaintext,
+            ".csv": self._read_plaintext,
+            ".docx": self._read_docx,
+            ".pdf": self._read_pdf,
+            ".msg": self._read_msg,
         }
 
-    def crawl(self, base: str) -> Generator[Source, None, None]:
+    def crawl(self, base: str) -> Iterator[Source]:
         for root, _, files in os.walk(base):
             for file in files:
-                ext = os.path.splitext(file)[1]
-                if ext not in self.extensions:
+                ext = os.path.splitext(file)[1].lower()
+                if ext not in self._readers:
                     continue
 
-                self.logger.debug(f"Crawler detected file: {file}")
                 path = os.path.join(root, file)
                 last_modified = datetime.fromtimestamp(os.path.getmtime(path))
                 yield Source(
@@ -42,11 +43,10 @@ class FileSourceHandler(SourceHandler):
                 )
 
     def _read_source(self, source: Source) -> str:
-        ext = os.path.splitext(source.uri)[1]
-        reader = self.extensions[ext]
+        ext = os.path.splitext(source.uri)[1].lower()
+        reader = self._readers[ext]
         path = source.uri[len(self.scheme) :]
-        text = reader(path)
-        return text
+        return reader(path)
 
     @staticmethod
     def _read_plaintext(path: str) -> str:
@@ -56,21 +56,14 @@ class FileSourceHandler(SourceHandler):
     @staticmethod
     def _read_docx(path: str) -> str:
         doc = docx.Document(path)
-        return "\n".join([para.text for para in doc.paragraphs])
+        return "\n".join(para.text for para in doc.paragraphs)
 
     @staticmethod
     def _read_pdf(path: str) -> str:
         doc = pymupdf.open(path)
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        return text
+        return "".join(page.get_text() for page in doc)
 
     @staticmethod
     def _read_msg(path: str) -> str:
         mail = extract_msg.Message(path)
-        return (
-            f"{mail.sender} -> {mail.to}\n"
-            f"{mail.date}: {mail.subject}\n"
-            f"{mail.body}"
-        )
+        return f"{mail.sender} -> {mail.to}\n{mail.date}: {mail.subject}\n{mail.body}"

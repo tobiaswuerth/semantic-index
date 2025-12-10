@@ -1,31 +1,34 @@
-import logging
-from typing import List
 import numpy as np
 
-from semantic_index import config
-from semantic_index.models import Embedding, Source
-
-from .model import BaseEmbeddingModel
-from .model_remote import RemoteEmbeddingModel
-from .model_gte import GTEEmbeddingModel
+from ..config import config
+from ..data import Embedding, Source
 from .chunk import Chunk, chunk_text
+from .model import BaseEmbeddingModel
+from .model_gte import GTEEmbeddingModel
+from .model_remote import RemoteEmbeddingModel
+
+
+def create_embedding_model() -> BaseEmbeddingModel:
+    if config.embedding_factory.process_remote:
+        return RemoteEmbeddingModel()
+    return GTEEmbeddingModel()
 
 
 class EmbeddingFactory:
-    logger = logging.getLogger(__name__)
+    def __init__(self, model: BaseEmbeddingModel | None = None):
+        self._model = model or create_embedding_model()
 
-    def __init__(self):
-        if config.embedding_factory.process_remote:
-            self.model: BaseEmbeddingModel = RemoteEmbeddingModel()
-        else:
-            self.model: BaseEmbeddingModel = GTEEmbeddingModel()
+    @property
+    def model(self) -> BaseEmbeddingModel:
+        return self._model
 
-    def process(self, content: str, source: Source) -> List[Embedding]:
+    def process(self, content: str, source: Source) -> list[Embedding]:
         assert source.id is not None, "Source ID must be set before processing."
 
-        chunks: List[Chunk] = chunk_text(content)
-        texts: List[str] = [chunk.text for chunk in chunks]
-        embeddings: np.ndarray = self.model.encode(texts)
+        chunks: list[Chunk] = chunk_text(content)
+        texts: list[str] = [chunk.text for chunk in chunks]
+        embeddings_array: np.ndarray = self._model.encode(texts)
+
         return [
             Embedding(
                 id=None,
@@ -33,5 +36,5 @@ class EmbeddingFactory:
                 embedding=embedding,
                 chunk_idx=chunk.idx,
             )
-            for chunk, embedding in zip(chunks, embeddings)
+            for chunk, embedding in zip(chunks, embeddings_array)
         ]

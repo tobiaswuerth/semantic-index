@@ -2,7 +2,9 @@ log_folder: "logs"
 log_level_console: "INFO"
 log_level_file: "DEBUG"
 
-index_path: "index.sqlite"
+database:
+  url: "sqlite:///index.sqlite"
+  echo: false
 
 embedding_factory:
   batch_size: 1

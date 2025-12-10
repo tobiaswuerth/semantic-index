@@ -1,8 +1,11 @@
+import logging
 import numpy as np
 import requests
 
-from semantic_index import config
 from .model import BaseEmbeddingModel
+from ..config import config
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteEmbeddingModel(BaseEmbeddingModel):
@@ -22,5 +25,5 @@ class RemoteEmbeddingModel(BaseEmbeddingModel):
             embeddings = response.json()
             return np.array(embeddings)
         except Exception as e:
-            self.logger.error(f"Request failed: {e}")
+            logger.error(f"Remote embedding request failed: {e}")
             raise

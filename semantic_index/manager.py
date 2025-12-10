@@ -1,129 +1,97 @@
 import logging
-import numpy as np
-import tqdm
-from fastapi import HTTPException
+from typing import Iterator
 
-from .embeddings import EmbeddingFactory, chunk_text, get_similarities
-from .index import Index
-from .sources import Resolver, SourceHandler, FileSourceHandler
-from .models import Embedding, Source
+from .api.schemas import ContentSchema, SearchResultSchema, SourceSchema
+from .data import EmbeddingRepository, SourceRepository, init_db
+from .data.models import Source
+from .embeddings import EmbeddingFactory
+from .services import ProcessingService, SearchService
+from .sources import FileSourceHandler, Resolver
 
 
 class Manager:
-    logger = logging.getLogger(__name__)
-
     def __init__(self):
-        self.index: Index = Index()
-        self.embedding_factory: EmbeddingFactory = EmbeddingFactory()
+        self._logger = logging.getLogger(__name__)
+        init_db()
 
-        self.resolver: Resolver = Resolver()
-        self.resolver.register(FileSourceHandler())
+        self._source_repo = SourceRepository()
+        self._embedding_repo = EmbeddingRepository()
+        self._embedding_factory = EmbeddingFactory()
 
-    def process_sources(self):
-        self.logger.info("Processing sources...")
-        todo = [
-            source
-            for source in self.index.sources
-            if not source.error
-            and (
-                not source.last_processed
-                or source.last_modified > source.last_processed
+        self._resolver = Resolver()
+        self._resolver.register(FileSourceHandler())
+
+        self._processing_service = ProcessingService(
+            source_repo=self._source_repo,
+            embedding_repo=self._embedding_repo,
+            embedding_factory=self._embedding_factory,
+            resolver=self._resolver,
+        )
+
+        self._load_data()
+
+    def _load_data(self) -> None:
+        self._logger.info("Loading data from database...")
+        self._sources = self._source_repo.get_all(order_by_modified=True)
+        self._source_by_id = {s.id: s for s in self._sources}
+        self._embeddings = self._embedding_repo.get_all()
+
+        self._search_service = SearchService(
+            model=self._embedding_factory.model,
+            embeddings=self._embeddings,
+            source_lookup=self._source_by_id,
+        )
+        self._logger.info(
+            f"Loaded {len(self._sources)} sources, {len(self._embeddings)} embeddings"
+        )
+
+    @property
+    def sources(self) -> list[Source]:
+        return self._sources
+
+    @property
+    def embedding_factory(self) -> EmbeddingFactory:
+        return self._embedding_factory
+
+    def process_sources(self) -> None:
+        self._processing_service.process_pending_sources(self._sources)
+        self._load_data()
+
+    def ingest_sources(self, sources: Iterator[Source]) -> int:
+        count = self._processing_service.ingest_sources(sources)
+        self._load_data()
+        return count
+
+    def find_knn_chunks(self, query: str, k: int = 10) -> list[SearchResultSchema]:
+        results = self._search_service.search_chunks(query, k)
+        return [
+            SearchResultSchema(
+                source=SourceSchema.model_validate(r.source),
+                similarity=r.similarity,
+                embedding_id=r.embedding.id,
             )
+            for r in results
         ]
 
-        logging.info(f"Found {len(todo)} sources to process.")
-
-        for source in tqdm.tqdm(todo, desc="Processing sources", unit="source"):
-            self.index.delete_embeddings_by_source(source)
-
-            handler: SourceHandler = self.resolver.find_for(source)
-            try:
-                contents = handler.read(source)
-                if contents is None or not contents.strip():
-                    raise ValueError(f"Source {source.uri} is empty or not readable.")
-            except Exception as e:
-                source.error = True
-                source.error_message = str(e)
-                self.index.update_source(source)
-                self.logger.error(f"Error processing source {source.uri}: {e}")
-                continue
-
-            embeddings = self.embedding_factory.process(contents, source)
-            self.index.create_embeddings(embeddings)
-            source.last_processed = source.last_modified
-            self.index.update_source(source)
-
-        self.logger.info("Finished processing sources.")
-        self.index.reload_data()
-
-    def find_knn_chunks(self, query: str, k: int = 10):
-        self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
-        if len(self.index.embeddings) == 0:
-            self.logger.debug("No embeddings in index.")
-            return []
-
-        query_embedding = self.embedding_factory.model.encode([query])[0]
-        all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
-        similarities, indices = get_similarities(query_embedding, all_embeddings)
-
-        self.logger.debug("Top k results...")
-        results = []
-        for idx in indices[:k]:
-            embedding: Embedding = self.index.embeddings[idx]
-            source = self.index.source_by_id[embedding.source_id]
-
-            results.append(
-                {
-                    "source": source.to_dict(),
-                    "similarity": float(similarities[idx]),
-                    "embedding_id": embedding.id,
-                }
+    def find_knn_docs(self, query: str, k: int = 10) -> list[SearchResultSchema]:
+        results = self._search_service.search_documents(query, k)
+        return [
+            SearchResultSchema(
+                source=SourceSchema.model_validate(r.source),
+                similarity=r.similarity,
+                embedding_id=r.embedding.id,
             )
+            for r in results
+        ]
 
-        self.logger.debug("done")
-        return results
+    def read_content_by_embedding_id(self, embedding_id: int) -> ContentSchema:
+        emb = self._embedding_repo.get_by_id(embedding_id)
+        if emb is None:
+            raise KeyError(f"Embedding {embedding_id} not found")
 
-    def find_knn_docs(self, query: str, k: int = 10):
-        self.logger.info(f"Finding {k} nearest neighbors for query: {query}")
-        if len(self.index.embeddings) == 0:
-            self.logger.debug("No embeddings in index.")
-            return []
+        source = self._source_by_id.get(emb.source_id)
+        if source is None:
+            raise KeyError(f"Source for embedding {embedding_id} not found")
 
-        query_embedding = self.embedding_factory.model.encode([query])[0]
-        all_embeddings = np.vstack([e.embedding for e in self.index.embeddings])
-        similarities, indices = get_similarities(query_embedding, all_embeddings)
-
-        self.logger.debug("Top k results...")
-        seen_docs = set()
-        results = []
-        for idx in indices:
-            if len(results) >= k:
-                break
-            embedding: Embedding = self.index.embeddings[idx]
-            source = self.index.source_by_id[embedding.source_id]
-            if source.id not in seen_docs:
-                seen_docs.add(source.id)
-                results.append(
-                    {
-                        "source": source.to_dict(),
-                        "similarity": float(similarities[idx]),
-                        "embedding_id": embedding.id,
-                    }
-                )
-
-        self.logger.debug("done")
-        return results
-
-    def read_content_by_embedding_id(self, embedding_id: int) -> dict:
-        self.logger.info(f"Reading content for embedding ID: {embedding_id}")
-        embedding: Embedding | None = self.index.get_embedding_by_id(embedding_id)
-        if embedding is None:
-            raise HTTPException(status_code=404, detail="Embedding not found")
-        source: Source = self.index.source_by_id[embedding.source_id]
-
-        handler: SourceHandler = self.resolver.find_for(source)
-        content = handler.read(source)
-        chunks = chunk_text(content)
-        return {
-            "section": chunks[embedding.chunk_idx].text,
-        }
+        content = self._processing_service.read_chunk_content(source, emb.chunk_idx)
+        return ContentSchema(section=content)

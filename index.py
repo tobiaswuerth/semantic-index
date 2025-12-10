@@ -1,10 +1,11 @@
-import logging
-import sys
-import os
-from datetime import datetime
 import argparse
+import logging
+import os
+import sys
+from datetime import datetime
 
-from semantic_index import config, Manager, FileSourceHandler
+from semantic_index import Manager, config
+from semantic_index.sources import FileSourceHandler
 
 
 def init_logging():
@@ -68,16 +69,14 @@ if __name__ == "__main__":
 
     logging.info("Starting Semantic Index Manager...")
     manager = Manager()
-    fh = FileSourceHandler()
-    manager.resolver.register(fh)
+    file_handler = FileSourceHandler()
     logging.info("Initialized Semantic Index Manager")
     logging.info("-" * 40)
 
     if args.ingest:
         logging.info(f"Ingesting sources from: {args.ingest}")
-        sources = fh.crawl(args.ingest)
-        manager.index.ingest_sources(sources)
-        manager.index.reload_data()
+        sources = file_handler.crawl(args.ingest)
+        manager.ingest_sources(sources)
         logging.info(f"Ingested sources from {args.ingest}")
         logging.info("-" * 40)
 
@@ -92,7 +91,6 @@ if __name__ == "__main__":
         results = manager.find_knn_chunks(args.knn, k=args.kcount)
         logging.info(f"Top {args.kcount} results for: '{args.knn}'")
         for i, result in enumerate(results, start=1):
-            s = result["source"]
             logging.info(
-                f' > ID {s["id"]} similarity {result['similarity']:.4f}: {s["uri"]}'
+                f" > ID {result.source.id} similarity {result.similarity:.4f}: {result.source.uri}"
             )

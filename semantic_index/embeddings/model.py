@@ -1,38 +1,35 @@
 import abc
-import logging
 import math
+from typing import Sequence
 import numpy as np
 from tqdm import tqdm
 
-from semantic_index import config
+from ..config import config
 
 
 class BaseEmbeddingModel(abc.ABC):
-    logger = logging.getLogger(__name__)
-
     def encode(
         self,
-        texts: list[str],
-        progressbar: bool = False,
+        texts: str | Sequence[str],
+        *,
+        show_progress: bool = False,
     ) -> np.ndarray:
-        batch_size = config.embedding_factory.batch_size
-        self.logger.debug(f"Encoding {len(texts)} texts with batch size {batch_size}...")
         if isinstance(texts, str):
             texts = [texts]
 
+        batch_size = config.embedding_factory.batch_size
         num_texts = len(texts)
-        iter = range(0, num_texts, batch_size)
-        if progressbar:
-            iter = tqdm(iter, total=math.ceil(num_texts / batch_size))
+        num_batches = math.ceil(num_texts / batch_size)
+
+        iterator = range(0, num_texts, batch_size)
+        if show_progress:
+            iterator = tqdm(iterator, total=num_batches, desc="Encoding")
 
         embeddings = []
-        for i in iter:
+        for i in iterator:
             batch = texts[i : i + batch_size]
-            embeddings.append(self._encode_batch(batch))
+            embeddings.append(self._encode_batch(list(batch)))
 
-        self.logger.debug("Encoding completed.")
-        if progressbar:
-            iter.close()
         return np.vstack(embeddings)
 
     @abc.abstractmethod

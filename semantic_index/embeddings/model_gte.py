@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import torch
 from transformers import (
@@ -8,14 +9,15 @@ from transformers import (
 
 from .model import BaseEmbeddingModel
 
+logger = logging.getLogger(__name__)
+
 
 class GTEEmbeddingModel(BaseEmbeddingModel):
     def __init__(self):
         super().__init__()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.logger.info(f"Using device: {self.device}")
-        self.logger.info("Loading model...")
+        logger.info(f"GTE model using device: {self.device}")
         model_name = "Alibaba-NLP/gte-multilingual-base"
         self.tokenizer: XLMRobertaTokenizerFast = AutoTokenizer.from_pretrained(
             model_name
@@ -24,7 +26,7 @@ class GTEEmbeddingModel(BaseEmbeddingModel):
             model_name, trust_remote_code=True, torch_dtype=torch.float16
         )
         self.model.to(self.device).eval()
-        self.logger.info("Model loaded successfully.")
+        logger.info("GTE model loaded")
 
         self.max_size = self.model.config.max_position_embeddings
 
