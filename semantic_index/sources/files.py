@@ -67,7 +67,7 @@ class FileSourceHandler(BaseSourceHandler):
                     source_type_id=type_model.id,
                     uri=path,
                     resolved_to=None,
-                    title=None,
+                    title=file,
                     obj_created=obj_created,
                     obj_modified=obj_modified,
                     last_processed=None,
