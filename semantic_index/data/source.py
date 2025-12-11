@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Iterator, Optional, TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, ForeignKey, select
@@ -9,6 +10,8 @@ if TYPE_CHECKING:
     from .embedding import Embedding
     from .source_handler import SourceHandler
     from .source_type import SourceType
+
+logger = logging.getLogger(__name__)
 
 
 class Source(Base):
@@ -35,7 +38,7 @@ class Source(Base):
 
     obj_created: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     obj_modified: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
+    last_checked: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_processed: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     error: Mapped[bool] = mapped_column(Boolean, default=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -80,6 +83,8 @@ class SourceRepository:
                     session.add(source)
                 if count % batch_size == 0:
                     session.flush()
+                    session.commit()
+                    logger.debug(f"Upserted {count} sources...")
         return count
 
     def update(self, source: Source) -> None:
