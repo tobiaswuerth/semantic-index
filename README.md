@@ -12,27 +12,23 @@ Create a searchable semantic index to find documents and sites.
 # Usage
 
 ```
-usage: index.py [-h] [--ingest HANDLER SOURCE] [--process]
-                [--knn QUERY] [--kcount KCOUNT] [--arg KEY=VALUE]  
+usage: index.py [-h] [--ingest HANDLER SOURCE] [--process] [--search QUERY] [--kcount KCOUNT]
+                [--arg KEY=VALUE]
 
 Semantic Index Manager
 
 options:
   -h, --help            show this help message and exit
   --ingest HANDLER SOURCE, -i HANDLER SOURCE
-                        Ingest sources using the specified
-                        handler and source (e.g., -i file /path/to/folder, or
-                        -i jira "https://jira.company.ch")
+                        Ingest sources using the specified handler and source (e.g., -i file
+                        /path/to/folder, -i jira https://my.url/api)
   --process, -p         Process all sources
-  --knn QUERY, -k QUERY
-                        Find k-nearest neighbors for the query     
+  --search QUERY, -s QUERY
+                        Find k-nearest neighbors for the query
   --kcount KCOUNT, -kc KCOUNT
-                        Number of results to return for KNN        
-                        search (default: 5)
+                        Number of results to return for KNN search (default: 5)
   --arg KEY=VALUE, -a KEY=VALUE
-                        Handler-specific arguments as key=value    
-                        pairs (can be used multiple times, e.g.,   
-                        -a key=my_api_key -a project=MYPROJ) 
+                        Handler-specific arguments as key=value pairs (can be used multiple times, e.g., -a key=my_api_key -a project=MYPROJ)
 ```
 
 ### Examples

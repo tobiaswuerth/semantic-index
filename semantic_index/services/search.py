@@ -26,22 +26,12 @@ class SearchService:
         self._source_repo = source_repo
         self._embedding_factory = embedding_factory
 
-
-    def _get_embedding_matrix(self) -> np.ndarray:
-        if self._embedding_matrix is None and self._embeddings:
-            self._embedding_matrix = np.vstack([e.embedding for e in self._embeddings])
-        return (
-            self._embedding_matrix
-            if self._embedding_matrix is not None
-            else np.array([])
-        )
-
     def search_chunks(self, query: str, k: int = 10) -> list[SearchResult]:
         embeddings = self._embedding_repo.get_all()
         if not embeddings:
             return []
-        
-        query_emb = self._embedding_factory._model.encode([query])[0]
+
+        query_emb = self._embedding_factory.model.encode([query])[0]
         emb_matrix = np.vstack([e.embedding for e in embeddings])
         similarities, indices = get_similarities(query_emb, emb_matrix)
 
@@ -64,8 +54,8 @@ class SearchService:
         embeddings = self._embedding_repo.get_all()
         if not embeddings:
             return []
-        
-        query_emb = self._embedding_factory._model.encode([query])[0]
+
+        query_emb = self._embedding_factory.model.encode([query])[0]
         emb_matrix = np.vstack([e.embedding for e in embeddings])
         similarities, indices = get_similarities(query_emb, emb_matrix)
 

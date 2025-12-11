@@ -2,11 +2,17 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .dependencies import get_manager
 from .routes import router
-from .schemas import *
-
-logger = logging.getLogger(__name__)
+from .schemas import (
+    SourceHandlerSchema,
+    SourceTypeSchema,
+    SourceSchema,
+    SourceDetailSchema,
+    SearchResultSchema,
+    ContentSchema,
+    SearchQueryRequest,
+)
+from .manager import Manager, get_manager
 
 
 def create_app() -> FastAPI:

@@ -70,22 +70,29 @@ class SourceRepository:
                 session.expunge(source)
             return source
 
-    def upsert_many(self, sources: Iterator[Source], *, batch_size: int = 1000) -> int:
-        count = 0
+    def upsert_many(self, sources: Iterator[Source]) -> tuple[int, int]:
+        updated, inserted = 0, 0
         with self._session_factory() as session:
-            for count, source in enumerate(sources, start=1):
-                existing = session.execute(
-                    select(Source).where(Source.uri == source.uri)
-                ).scalar_one_or_none()
-                if existing:
-                    existing.obj_modified = source.obj_modified
-                else:
-                    session.add(source)
-                if count % batch_size == 0:
-                    session.flush()
-                    session.commit()
-                    logger.debug(f"Upserted {count} sources...")
-        return count
+            try:
+                for count, source in enumerate(sources, start=1):
+                    existing = session.execute(
+                        select(Source).where(Source.uri == source.uri)
+                    ).scalar_one_or_none()
+                    if existing:
+                        existing.obj_modified = source.obj_modified
+                        existing.last_checked = datetime.now()
+                        existing.title = source.title
+                        updated += 1
+                    else:
+                        session.add(source)
+                        inserted += 1
+                    if count % 1000 == 0:
+                        session.flush()
+                        session.commit()
+                        logger.debug(f"Upserted {count} sources...")
+            except KeyboardInterrupt:
+                logger.warning("Upsert operation interrupted by user.")
+        return updated, inserted
 
     def update(self, source: Source) -> None:
         with self._session_factory() as session:

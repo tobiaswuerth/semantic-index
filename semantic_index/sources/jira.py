@@ -130,4 +130,4 @@ class JiraSourceHandler(BaseSourceHandler):
             idx += len(results)
 
     def _read_source(self, source: Source) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError('Reading Jira sources is not implemented yet.')

@@ -24,19 +24,18 @@ class ProcessingService:
         self._embedding_factory = embedding_factory
         self._resolver = resolver
 
-    def ingest_sources(self, sources: Iterator[Source]) -> int:
+    def ingest_sources(self, sources: Iterator[Source]) -> None:
         logger.info("Ingesting sources...")
-        count = self._source_repo.upsert_many(sources)
-        logger.info(f"Ingested {count} sources")
-        return count
+        updated, inserted = self._source_repo.upsert_many(sources)
+        logger.info(f"{updated} sources updated, {inserted} sources inserted.")
+        logger.info("Ingestion complete.")
 
-    def process_pending_sources(
-        self,
-        sources: list[Source],
-        *,
-        show_progress: bool = True,
-    ) -> tuple[int, int]:
+    def process_pending_sources(self) -> None:
         logger.info("Processing sources...")
+        sources = self._source_repo.get_all(order_by_modified=True)
+        if not sources:
+            logger.info("No sources to process")
+            return
 
         todo = [
             s
@@ -44,30 +43,26 @@ class ProcessingService:
             if not s.error
             and (not s.last_processed or s.obj_modified > s.last_processed)
         ]
-        logger.info(f"Found {len(todo)} sources to process")
+        skipped = len(sources) - len(todo)
+        logger.info(f"{skipped} sources skipped, {len(todo)} sources to process.")
+        if not todo:
+            logger.info("Processing complete.")
+            return
 
-        processed_count = 0
-        error_count = 0
-
-        iterator = (
-            tqdm.tqdm(todo, desc="Processing", unit="source") if show_progress else todo
-        )
-
-        for source in iterator:
+        ok, error = 0, 0
+        for source in tqdm.tqdm(todo, desc="Processing", unit="source"):
             try:
                 self._process_single_source(source)
-                processed_count += 1
+                ok += 1
             except Exception as e:
-                error_count += 1
+                error += 1
                 source.error = True
                 source.error_message = str(e)
                 self._source_repo.update(source)
                 logger.error(f"Error processing {source.uri}: {e}")
 
-        logger.info(
-            f"Finished processing: {processed_count} success, {error_count} errors"
-        )
-        return processed_count, error_count
+        logger.info(f"{ok} ok, {error} errors occurred.")
+        logger.info("Processing complete.")
 
     def _process_single_source(self, source: Source) -> None:
         self._embedding_repo.delete_by_source_id(source.id)

@@ -1,35 +1,11 @@
 import argparse
 import logging
-import os
 import sys
-from datetime import datetime
 
-from semantic_index import Manager, config
-
-
-def init_logging():
-    os.makedirs(config.log_folder, exist_ok=True)
-
-    log_filename = os.path.join(
-        config.log_folder, f"log_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
-    )
-
-    file_handler = logging.FileHandler(log_filename, encoding="utf-8")
-    file_handler.setLevel(getattr(logging, config.log_level_file))
-
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(getattr(logging, config.log_level_console))
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [ %(levelname)s ] %(message)s",
-        handlers=[file_handler, stream_handler],
-    )
+from semantic_index import get_manager, Manager
 
 
-if __name__ == "__main__":
-    init_logging()
-
+def init_parser():
     parser = argparse.ArgumentParser(description="Semantic Index Manager")
 
     parser.add_argument(
@@ -48,8 +24,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--knn",
-        "-k",
+        "--search",
+        "-s",
         metavar="QUERY",
         help="Find k-nearest neighbors for the query",
     )
@@ -70,50 +46,69 @@ if __name__ == "__main__":
         default=[],
         help="Handler-specific arguments as key=value pairs (can be used multiple times, e.g., -a key=my_api_key -a project=MYPROJ)",
     )
+    return parser
 
+
+def handle_ingest(manager: Manager, args: argparse.Namespace):
+    if not args.ingest:
+        return
+
+    # check handler
+    handler_name, source_path = args.ingest
+    logging.info(f"Ingesting {source_path} using handler '{handler_name}'")
+    handler = manager.resolver.get_handler_by_name(handler_name)
+    if handler is None:
+        logging.error(f"Handler '{handler_name}' not registered")
+        sys.exit(1)
+
+    # Parse handler-specific arguments
+    handler_args = {}
+    for arg in args.arg:
+        if "=" not in arg:
+            logging.error(f"Invalid argument format: '{arg}'. Expected KEY=VALUE")
+            sys.exit(1)
+        key, value = arg.split("=", 1)
+        handler_args[key] = value
+
+    sources = handler.crawl(source_path, **handler_args)
+    manager.processing_service.ingest_sources(sources)
+    logging.info(f"Ingested sources from {source_path}")
+    logging.info("-" * 40)
+
+
+def handle_process(manager: Manager, args: argparse.Namespace):
+    if not args.process:
+        return
+
+    logging.info("Processing all sources")
+    manager.processing_service.process_pending_sources()
+    logging.info("Processed all sources")
+    logging.info("-" * 40)
+
+
+def handle_search(manager: Manager, args: argparse.Namespace):
+    if not args.search:
+        return
+
+    logging.info(f"Finding KNN for query: {args.search} with k={args.kcount}")
+    results = manager.search_service.search_documents(args.search, k=args.kcount)
+    logging.info(f"Top {args.kcount} results for: '{args.search}'")
+    for result in results:
+        logging.info(
+            f" > ID {result.source.id} similarity {result.similarity:.4f}: {result.source.uri}"
+        )
+
+
+if __name__ == "__main__":
+    parser = init_parser()
     args = parser.parse_args()
-    if not (args.ingest or args.process or args.knn):
+    if not (args.ingest or args.process or args.search):
         logging.error(parser.format_help())
         sys.exit(1)
 
-    logging.info("Starting Semantic Index Manager...")
-    manager = Manager()
-    logging.info("Initialized Semantic Index Manager")
-    logging.info("-" * 40)
+    manager = get_manager()
+    handle_ingest(manager, args)
+    handle_process(manager, args)
+    handle_search(manager, args)
 
-    if args.ingest:
-        handler_name, source_path = args.ingest
-        logging.info(f"Ingesting sources using handler '{handler_name}' from: {source_path}")
-        handler = manager.get_handler(handler_name)
-        if handler is None:
-            logging.error(f"Handler '{handler_name}' not registered")
-            sys.exit(1)
-
-        # Parse handler-specific arguments
-        handler_args = {}
-        for arg in args.arg:
-            if "=" not in arg:
-                logging.error(f"Invalid argument format: '{arg}'. Expected KEY=VALUE")
-                sys.exit(1)
-            key, value = arg.split("=", 1)
-            handler_args[key] = value
-
-        sources = handler.crawl(source_path, **handler_args)
-        manager.ingest_sources(sources)
-        logging.info(f"Ingested sources from {source_path}")
-        logging.info("-" * 40)
-
-    if args.process:
-        logging.info("Processing all sources")
-        manager.process_sources()
-        logging.info("Processed all sources")
-        logging.info("-" * 40)
-
-    if args.knn:
-        logging.info(f"Finding KNN for query: {args.knn} with k={args.kcount}")
-        results = manager.find_knn_chunks(args.knn, k=args.kcount)
-        logging.info(f"Top {args.kcount} results for: '{args.knn}'")
-        for i, result in enumerate(results, start=1):
-            logging.info(
-                f" > ID {result.source.id} similarity {result.similarity:.4f}: {result.source.uri}"
-            )
+    logging.info("Semantic Index Manager exiting.")

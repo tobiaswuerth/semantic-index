@@ -10,7 +10,13 @@ from .model_remote import RemoteEmbeddingModel
 
 class EmbeddingFactory:
     def __init__(self):
-        self._model = self.create_embedding_model()
+        self._model = None
+
+    @property
+    def model(self) -> BaseEmbeddingModel:
+        if self._model is None:
+            self._model = self.create_embedding_model()
+        return self._model
 
     def create_embedding_model(self) -> BaseEmbeddingModel:
         if config.embedding_factory.process_remote:
@@ -22,7 +28,7 @@ class EmbeddingFactory:
 
         chunks: list[Chunk] = chunk_text(content)
         texts: list[str] = [chunk.text for chunk in chunks]
-        embeddings_array: np.ndarray = self._model.encode(texts)
+        embeddings_array: np.ndarray = self.model.encode(texts)
 
         return [
             Embedding(
