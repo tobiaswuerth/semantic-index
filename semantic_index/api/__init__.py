@@ -7,7 +7,6 @@ from .schemas import (
     SourceHandlerSchema,
     SourceTypeSchema,
     SourceSchema,
-    SourceDetailSchema,
     SearchResultSchema,
     ContentSchema,
     SearchQueryRequest,
