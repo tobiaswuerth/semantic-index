@@ -41,8 +41,9 @@ class Resolver:
         return self._handlers.get(handler_id)
 
     def get_handler_by_name(self, name: str) -> BaseSourceHandler | None:
+        name = name.strip().lower()
         for handler in self._handlers.values():
-            if handler.handler_name == name:
+            if handler.handler_name.lower() == name:
                 return handler
         return None
 
