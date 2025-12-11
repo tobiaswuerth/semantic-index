@@ -7,7 +7,7 @@ database:
   echo: false
 
 embedding_factory:
-  batch_size: 8
+  batch_size: 1
   process_remote: false
   remote_host: "http://192.168.1.103"
   remote_port: 8000
