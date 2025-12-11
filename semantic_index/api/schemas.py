@@ -3,16 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class SourceHandlerSchema(BaseModel):
-    """Schema for source handler representation."""
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-
-
 class SourceTypeSchema(BaseModel):
-    """Schema for source type representation."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -24,7 +15,6 @@ class SourceSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    source_handler: SourceHandlerSchema
     source_type: SourceTypeSchema
 
     uri: str

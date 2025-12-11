@@ -68,14 +68,12 @@ class SourceRepository:
             stmt = (
                 select(Source)
                 .options(
-                    joinedload(Source.source_handler),
                     joinedload(Source.source_type),
                 )
                 .where(Source.id == source_id)
             )
             source = session.execute(stmt).scalars().first()
             if source:
-                session.expunge(source.source_handler)
                 session.expunge(source.source_type)
                 session.expunge(source)
             return source

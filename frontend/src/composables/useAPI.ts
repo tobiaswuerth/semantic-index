@@ -1,8 +1,3 @@
-export interface SourceHandlerSchema {
-    id: number;
-    name: string;
-}
-
 export interface SourceTypeSchema {
     id: number;
     name: string;
@@ -11,7 +6,6 @@ export interface SourceTypeSchema {
 
 export interface Source {
     id: number;
-    source_handler: SourceHandlerSchema;
     source_type: SourceTypeSchema;
     uri: string;
     resolved_to?: string;

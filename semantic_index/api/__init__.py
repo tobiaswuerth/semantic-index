@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routes import router
 from .schemas import (
-    SourceHandlerSchema,
     SourceTypeSchema,
     SourceSchema,
     SearchResultSchema,
