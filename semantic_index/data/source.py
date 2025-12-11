@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Iterator, Optional, TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, ForeignKey, select
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
 
 from .database import Base, get_session, SessionFactory
 
@@ -53,7 +53,7 @@ class SourceRepository:
     def __init__(self, session_factory: SessionFactory = get_session):
         self._session_factory = session_factory
 
-    def get_all(self, *, order_by_modified: bool = True) -> list[Source]:
+    def get_all(self, order_by_modified: bool = True) -> list[Source]:
         with self._session_factory() as session:
             stmt = select(Source)
             if order_by_modified:
@@ -65,8 +65,18 @@ class SourceRepository:
 
     def get_by_id(self, source_id: int) -> Source | None:
         with self._session_factory() as session:
-            source = session.get(Source, source_id)
+            stmt = (
+                select(Source)
+                .options(
+                    joinedload(Source.source_handler),
+                    joinedload(Source.source_type),
+                )
+                .where(Source.id == source_id)
+            )
+            source = session.execute(stmt).scalars().first()
             if source:
+                session.expunge(source.source_handler)
+                session.expunge(source.source_type)
                 session.expunge(source)
             return source
 
@@ -79,6 +89,7 @@ class SourceRepository:
                         select(Source).where(Source.uri == source.uri)
                     ).scalar_one_or_none()
                     if existing:
+                        existing.obj_created = source.obj_created
                         existing.obj_modified = source.obj_modified
                         existing.last_checked = datetime.now()
                         existing.title = source.title
@@ -98,6 +109,7 @@ class SourceRepository:
         with self._session_factory() as session:
             db_source = session.get(Source, source.id)
             if db_source:
+                db_source.last_checked = source.last_checked
                 db_source.last_processed = source.last_processed
                 db_source.error = source.error
                 db_source.error_message = source.error_message
