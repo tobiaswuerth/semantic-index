@@ -23,12 +23,12 @@ class GTEEmbeddingModel(BaseEmbeddingModel):
             model_name
         )
         self.model: torch.nn.Module = AutoModelForTokenClassification.from_pretrained(
-            model_name, trust_remote_code=True, torch_dtype=torch.float16
+            model_name,
+            trust_remote_code=True,
+            dtype=torch.float16,
         )
         self.model.to(self.device).eval()
         logger.info("GTE model loaded")
-
-        self.max_size = self.model.config.max_position_embeddings
 
     @torch.no_grad()
     def _encode_batch(self, batch: list[str]) -> np.ndarray:
@@ -37,7 +37,7 @@ class GTEEmbeddingModel(BaseEmbeddingModel):
             padding=True,
             truncation=True,
             return_tensors="pt",
-            max_length=self.max_size,
+            max_length=self.model.config.max_position_embeddings,
         )
 
         model_out = self.model(
