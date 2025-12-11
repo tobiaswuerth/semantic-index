@@ -1,10 +1,25 @@
+export interface SourceHandlerSchema {
+    id: number;
+    name: string;
+}
+
+export interface SourceTypeSchema {
+    id: number;
+    name: string;
+    source_handler_id: number;
+}
+
 export interface Source {
     id: number;
+    source_handler: SourceHandlerSchema;
+    source_type: SourceTypeSchema;
     uri: string;
-    last_modified: string;
-    last_processed: string | null;
-    error: number;
-    error_message: string | null;
+    resolved_to?: string;
+    obj_created: string;
+    obj_modified: string;
+    last_checked: string;
+    last_processed: string;
+    title?: string;
 }
 
 export interface KnnSearchResult {

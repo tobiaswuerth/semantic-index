@@ -6,6 +6,8 @@ import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import PrimeTheme from '@primeuix/themes/aura'
 import PrimeToast from 'primevue/toastservice'
+import PrimeTooltip from 'primevue/tooltip';
+
 
 import App from './App.vue'
 import router from './router.ts'
@@ -25,5 +27,6 @@ app.use(PrimeVue, {
   },
 })
 app.use(PrimeToast)
+app.directive('tooltip', PrimeTooltip);
 
 app.mount('#app')

@@ -13,6 +13,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppToolbar: typeof import('./src/components/AppToolbar.vue')['default']
+    Badge: typeof import('primevue/badge')['default']
     Button: typeof import('primevue/button')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
@@ -24,16 +25,22 @@ declare module 'vue' {
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SearchResultItem: typeof import('./src/components/SearchResultItem.vue')['default']
+    SearchResultList: typeof import('./src/components/SearchResultList.vue')['default']
     StatusPopup: typeof import('./src/components/StatusPopup.vue')['default']
     Tag: typeof import('primevue/tag')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
+  }
+  export interface GlobalDirectives {
+    Tooltip: typeof import('primevue/tooltip')['default']
   }
 }
 
 // For TSX support
 declare global {
   const AppToolbar: typeof import('./src/components/AppToolbar.vue')['default']
+  const Badge: typeof import('primevue/badge')['default']
   const Button: typeof import('primevue/button')['default']
   const Dialog: typeof import('primevue/dialog')['default']
   const Divider: typeof import('primevue/divider')['default']
@@ -45,6 +52,8 @@ declare global {
   const ProgressSpinner: typeof import('primevue/progressspinner')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
+  const SearchResultItem: typeof import('./src/components/SearchResultItem.vue')['default']
+  const SearchResultList: typeof import('./src/components/SearchResultList.vue')['default']
   const StatusPopup: typeof import('./src/components/StatusPopup.vue')['default']
   const Tag: typeof import('primevue/tag')['default']
   const ToggleSwitch: typeof import('primevue/toggleswitch')['default']
