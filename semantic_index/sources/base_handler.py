@@ -23,10 +23,10 @@ class BaseSourceHandler(abc.ABC):
     def set_handler_model(self, model: SourceHandlerModel) -> None:
         self._handler_model = model
 
-    def get_type_model(self, type_name: str) -> SourceTypeModel:
+    def source_type_by_name(self, type_name: str) -> SourceTypeModel:
         return self._type_models[type_name]
 
-    def set_type_model(self, type_name: str, model: SourceTypeModel) -> None:
+    def set_source_type(self, type_name: str, model: SourceTypeModel) -> None:
         self._type_models[type_name] = model
 
     @abc.abstractmethod
@@ -35,6 +35,7 @@ class BaseSourceHandler(abc.ABC):
 
     def read(self, source: Source) -> str:
         text = self._read_source(source)
+        assert isinstance(text, str), "Read source must return a string"
         return " ".join(text.split())
 
     @abc.abstractmethod

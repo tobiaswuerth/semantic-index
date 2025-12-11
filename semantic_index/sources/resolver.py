@@ -23,7 +23,7 @@ class Resolver:
 
         for type_name in handler.source_types.keys():
             type_model = self._type_repo.get_or_create(type_name, handler_model.id)
-            handler.set_type_model(type_name, type_model)
+            handler.set_source_type(type_name, type_model)
             logger.info(f"  Registered type: {type_name} (id={type_model.id})")
 
         self._handlers[handler_model.id] = handler

@@ -1,4 +1,4 @@
 from .base_handler import BaseSourceHandler
-from .files import FileSourceHandler
-from .jira import JiraSourceHandler
+from .file_handler import FileSourceHandler
+from .jira_handler import JiraSourceHandler
 from .resolver import Resolver

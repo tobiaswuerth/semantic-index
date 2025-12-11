@@ -1,12 +1,10 @@
 import logging
 import os
 from datetime import datetime
-from typing import Callable, Iterator
-import docx
-import extract_msg
-import pymupdf
+from typing import Iterator
 
 from ..data import Source
+from .io import supported_extensions, extension_to_reader
 from .base_handler import BaseSourceHandler
 
 logger = logging.getLogger(__name__)
@@ -30,14 +28,6 @@ class FileSourceHandler(BaseSourceHandler):
             for type_name, ext_list in self.source_types.items()
             for ext in ext_list
         }
-        self.ext_to_reader = {
-            ".txt": self._read_plaintext,
-            ".md": self._read_plaintext,
-            ".csv": self._read_plaintext,
-            ".docx": self._read_docx,
-            ".pdf": self._read_pdf,
-            ".msg": self._read_msg,
-        }
 
     def crawl(self, base: str) -> Iterator[Source]:
         handler_model = self.get_handler_model()
@@ -52,7 +42,7 @@ class FileSourceHandler(BaseSourceHandler):
                     continue
 
                 type_name = self.ext_to_name[ext]
-                type_model = self.get_type_model(type_name)
+                type_model = self.source_type_by_name(type_name)
                 assert type_model
 
                 path = os.path.join(root, file)
@@ -66,7 +56,7 @@ class FileSourceHandler(BaseSourceHandler):
                     source_handler_id=handler_model.id,
                     source_type_id=type_model.id,
                     uri=path,
-                    resolved_to=f'file://{path}',
+                    resolved_to=f"file://{path}",
                     title=file,
                     obj_created=obj_created,
                     obj_modified=obj_modified,
@@ -78,26 +68,8 @@ class FileSourceHandler(BaseSourceHandler):
 
     def _read_source(self, source: Source) -> str:
         ext = os.path.splitext(source.uri)[1].lower()
-        assert ext in self.ext_to_reader
-        reader = self.ext_to_reader[ext]
+        if ext not in supported_extensions:
+            raise ValueError(f"Unsupported file extension: {ext}")
+
+        reader = extension_to_reader[ext]
         return reader(source.uri)
-
-    @staticmethod
-    def _read_plaintext(path: str) -> str:
-        with open(path, "r", encoding="utf-8") as file:
-            return file.read()
-
-    @staticmethod
-    def _read_docx(path: str) -> str:
-        doc = docx.Document(path)
-        return "\n".join([para.text for para in doc.paragraphs])
-
-    @staticmethod
-    def _read_pdf(path: str) -> str:
-        doc = pymupdf.open(path)
-        return "".join([str(page.get_text()) for page in doc])
-
-    @staticmethod
-    def _read_msg(path: str) -> str:
-        mail = extract_msg.Message(path)
-        return f"{mail.sender} -> {mail.to}\n{mail.date}: {mail.subject}\n{mail.body}"
