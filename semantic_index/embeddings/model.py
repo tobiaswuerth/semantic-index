@@ -11,7 +11,6 @@ class BaseEmbeddingModel(abc.ABC):
     def encode(
         self,
         texts: str | Sequence[str],
-        *,
         show_progress: bool = False,
     ) -> np.ndarray:
         if isinstance(texts, str):
