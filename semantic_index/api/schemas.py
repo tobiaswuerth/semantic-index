@@ -24,22 +24,17 @@ class SourceSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    source_handler: SourceHandlerSchema
+    source_type: SourceTypeSchema
+
     uri: str
-    source_handler_id: int
-    source_type_id: int
     resolved_to: Optional[str] = None
-    title: Optional[str] = None
+
     obj_created: datetime
     obj_modified: datetime
-    last_processed: Optional[datetime] = None
-    error: bool = False
-    error_message: Optional[str] = None
-
-
-class SourceDetailSchema(SourceSchema):
-    """Extended source schema with handler and type details."""
-    source_handler: Optional[SourceHandlerSchema] = None
-    source_type: Optional[SourceTypeSchema] = None
+    last_checked: datetime
+    last_processed: datetime
+    title: Optional[str] = None
 
 
 class SearchResultSchema(BaseModel):
