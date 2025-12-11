@@ -75,7 +75,7 @@ class JiraSourceHandler(BaseSourceHandler):
                     source_type_id=type_issue.id,
                     uri=issue["self"],
                     resolved_to=ticket_url,
-                    title=f"Jira Issue {issue_key}: {fields['summary']}",
+                    title=f"Jira {issue_key}: {fields['summary']}",
                     obj_created=cdate,
                     obj_modified=mdate,
                     last_checked=datetime.now(),
@@ -98,7 +98,7 @@ class JiraSourceHandler(BaseSourceHandler):
                         source_type_id=type_comment.id,
                         uri=comment["self"],
                         resolved_to=f"{ticket_url}?focusedCommentId={comment_id}",
-                        title=f"Comment {comment_id} on Jira Issue {issue_key}",
+                        title=f"Jira {issue_key} Comment: {comment_id}",
                         obj_created=cdate,
                         obj_modified=mdate,
                         last_checked=datetime.now(),
@@ -111,6 +111,13 @@ class JiraSourceHandler(BaseSourceHandler):
                 attachments = fields.get("attachment", [])
                 for attachment in attachments:
                     filename = attachment["filename"]
+                    ext = "." + filename.split(".")[-1].lower()
+                    if ext not in supported_extensions:
+                        logger.info(
+                            f"Skipping unsupported attachment type: {filename} ({ext})"
+                        )
+                        continue
+
                     cdate = attachment["created"]
                     mdate = self.parse_date(attachment.get("updated", cdate))
                     cdate = self.parse_date(cdate)
@@ -120,7 +127,7 @@ class JiraSourceHandler(BaseSourceHandler):
                         source_type_id=type_attachment.id,
                         uri=attachment["self"],
                         resolved_to=attachment["content"],
-                        title=f"Attachment {filename} on Jira Issue {issue_key}",
+                        title=f"Jira {issue_key} Attachment: {filename}",
                         obj_created=cdate,
                         obj_modified=mdate,
                         last_checked=datetime.now(),
@@ -159,7 +166,12 @@ class JiraSourceHandler(BaseSourceHandler):
         fix_versions = ", ".join(
             [v.get("name", "") for v in fields.get("fixVersions", [])]
         )
-        resolution = fields.get("resolution", {}).get("name", "Unresolved")
+
+        resolution = fields.get("resolution", {})
+        resolution = (
+            "Unresolved" if not resolution else resolution.get("name", "Unresolved")
+        )
+
         resolutiondate = fields.get("resolutiondate", "N/A")
         createdate = fields.get("created", "N/A")
         priority = fields.get("priority", {}).get("name", "N/A")
