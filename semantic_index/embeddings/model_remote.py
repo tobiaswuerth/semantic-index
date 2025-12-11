@@ -20,7 +20,12 @@ class RemoteEmbeddingModel(BaseEmbeddingModel):
         data = {"batch": batch}
 
         try:
-            response = requests.post(url, headers=headers, json=data)
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=config.embedding_factory.timeout_seconds,
+            )
             response.raise_for_status()
             embeddings = response.json()
             return np.array(embeddings)

@@ -16,6 +16,7 @@ class EmbeddingFactoryConfig:
     remote_host: str = "http://localhost"
     remote_port: int = 8000
     remote_endpoint: str = "/encode"
+    timeout_seconds: int = 30
 
 
 @dataclass(frozen=True)
