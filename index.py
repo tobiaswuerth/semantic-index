@@ -37,15 +37,6 @@ def init_parser():
         default=5,
         help="Number of results to return for KNN search (default: 5)",
     )
-
-    parser.add_argument(
-        "--arg",
-        "-a",
-        action="append",
-        metavar="KEY=VALUE",
-        default=[],
-        help="Handler-specific arguments as key=value pairs (can be used multiple times, e.g., -a key=my_api_key -a project=MYPROJ)",
-    )
     return parser
 
 
@@ -61,16 +52,7 @@ def handle_ingest(manager: Manager, args: argparse.Namespace):
         logging.error(f"Handler '{handler_name}' not registered")
         sys.exit(1)
 
-    # Parse handler-specific arguments
-    handler_args = {}
-    for arg in args.arg:
-        if "=" not in arg:
-            logging.error(f"Invalid argument format: '{arg}'. Expected KEY=VALUE")
-            sys.exit(1)
-        key, value = arg.split("=", 1)
-        handler_args[key] = value
-
-    sources = handler.crawl(source_path, **handler_args)
+    sources = handler.crawl(source_path)
     manager.processing_service.ingest_sources(sources)
     logging.info(f"Ingested sources from {source_path}")
     logging.info("-" * 40)

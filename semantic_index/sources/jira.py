@@ -5,6 +5,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from ..data import Source, SourceType
+from ..config import config
 from .base_handler import BaseSourceHandler
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class JiraSourceHandler(BaseSourceHandler):
     def __init__(self):
         super().__init__()
 
-    def _search(self, base_url: str, key: str, start_at: int):
+    def _search(self, base_url: str, start_at: int):
         query = {
             "jql": "",
             "maxResults": 1000,
@@ -29,7 +30,7 @@ class JiraSourceHandler(BaseSourceHandler):
             "fields": "id,key,summary,created,updated,attachment,filename,comment,author",
         }
         headers = {
-            "Authorization": f"Bearer {key}",
+            "Authorization": f"Bearer {config.jira.api_key}",
             "Content-Type": "application/json",
         }
         search_url = f"{base_url}/rest/api/2/search"
@@ -41,10 +42,7 @@ class JiraSourceHandler(BaseSourceHandler):
         # e.g. "created": "2018-11-14T10:23:58.137+0100",
         return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
 
-    def crawl(self, base: str, **kwargs) -> Iterator[Source]:
-        api_key = kwargs.get("key")
-        assert api_key, "API key is required to crawl Jira sources"
-
+    def crawl(self, base: str) -> Iterator[Source]:
         handler = self.get_handler_model()
         assert handler
 
@@ -56,7 +54,7 @@ class JiraSourceHandler(BaseSourceHandler):
         idx = 0
         results = [1]
         while results:
-            data = self._search(base, api_key, idx)
+            data = self._search(base, idx)
             results = data.get("issues", [])
             for issue in results:
                 issue_key = issue["key"]
@@ -130,4 +128,19 @@ class JiraSourceHandler(BaseSourceHandler):
             idx += len(results)
 
     def _read_source(self, source: Source) -> str:
-        raise NotImplementedError('Reading Jira sources is not implemented yet.')
+        api_key = config.jira.api_key
+        if not api_key:
+            raise ValueError("API key is required to read Jira sources. Set it in config.yaml")
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        url = source.uri
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # todo json to str template
+
+        return data

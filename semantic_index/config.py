@@ -4,6 +4,12 @@ import yaml
 
 
 @dataclass(frozen=True)
+class DatabaseConfig:
+    url: str = "sqlite:///semantic_index.db"
+    echo: bool = False
+
+
+@dataclass(frozen=True)
 class EmbeddingFactoryConfig:
     batch_size: int = 32
     process_remote: bool = False
@@ -13,9 +19,8 @@ class EmbeddingFactoryConfig:
 
 
 @dataclass(frozen=True)
-class DatabaseConfig:
-    url: str = "sqlite:///semantic_index.db"
-    echo: bool = False
+class JiraConfig:
+    api_key: str = ""
 
 
 @dataclass(frozen=True)
@@ -23,9 +28,15 @@ class Config:
     log_folder: str = "logs"
     log_level_console: str = "INFO"
     log_level_file: str = "DEBUG"
-    database: DatabaseConfig = field(default_factory=DatabaseConfig)
+
+    database: DatabaseConfig = field(
+        default_factory=DatabaseConfig,
+    )
     embedding_factory: EmbeddingFactoryConfig = field(
-        default_factory=EmbeddingFactoryConfig
+        default_factory=EmbeddingFactoryConfig,
+    )
+    jira: JiraConfig = field(
+        default_factory=JiraConfig,
     )
 
 
@@ -43,6 +54,7 @@ def load_config(config_path: str | Path) -> Config:
         log_level_file=raw.get("log_level_file", "DEBUG"),
         database=DatabaseConfig(**raw.get("database", {})),
         embedding_factory=EmbeddingFactoryConfig(**raw.get("embedding_factory", {})),
+        jira=JiraConfig(**raw.get("jira", {})),
     )
 
 

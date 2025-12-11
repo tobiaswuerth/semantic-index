@@ -39,7 +39,7 @@ class FileSourceHandler(BaseSourceHandler):
             ".msg": self._read_msg,
         }
 
-    def crawl(self, base: str, **kwargs) -> Iterator[Source]:
+    def crawl(self, base: str) -> Iterator[Source]:
         handler_model = self.get_handler_model()
         assert handler_model
 

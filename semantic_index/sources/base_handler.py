@@ -30,7 +30,7 @@ class BaseSourceHandler(abc.ABC):
         self._type_models[type_name] = model
 
     @abc.abstractmethod
-    def crawl(self, base: str, **kwargs) -> Iterator[Source]:
+    def crawl(self, base: str) -> Iterator[Source]:
         pass
 
     def read(self, source: Source) -> str:
