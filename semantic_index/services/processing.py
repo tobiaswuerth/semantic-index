@@ -2,6 +2,7 @@ import logging
 from typing import Iterator
 import tqdm
 import traceback
+from datetime import datetime
 
 from ..data import Source, EmbeddingRepository, SourceRepository
 from ..embeddings import chunk_text
@@ -53,19 +54,21 @@ class ProcessingService:
         ok, error = 0, 0
         for source in tqdm.tqdm(todo, desc="Processing", unit="source"):
             try:
-                self._process_single_source(source)
+                self.process_single_source(source)
                 ok += 1
             except Exception as e:
                 error += 1
                 source.error = True
                 source.error_message = str(e)
                 self._source_repo.update(source)
-                logger.error(f"Error processing {source.uri}: {e}\n{traceback.format_exc()}")
+                logger.error(
+                    f"Error processing {source.uri}: {e}\n{traceback.format_exc()}"
+                )
 
         logger.info(f"{ok} ok, {error} errors occurred.")
         logger.info("Processing complete.")
 
-    def _process_single_source(self, source: Source) -> None:
+    def process_single_source(self, source: Source) -> None:
         self._embedding_repo.delete_by_source_id(source.id)
 
         handler: BaseSourceHandler = self._resolver.find_for(source)
@@ -77,7 +80,11 @@ class ProcessingService:
         embeddings = self._embedding_factory.process(contents, source)
         self._embedding_repo.create_many(embeddings)
 
-        source.last_processed = source.obj_modified
+        now = datetime.now()
+        source.last_checked = now
+        source.last_processed = now
+        source.error = False
+        source.error_message = None
         self._source_repo.update(source)
 
     def read_chunk_content(self, source: Source, chunk_idx: int) -> str:
