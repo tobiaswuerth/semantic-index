@@ -23,8 +23,8 @@ class BaseSourceHandler(abc.ABC):
     def set_handler_model(self, model: SourceHandlerModel) -> None:
         self._handler_model = model
 
-    def get_type_model(self, type_name: str) -> SourceTypeModel | None:
-        return self._type_models.get(type_name)
+    def get_type_model(self, type_name: str) -> SourceTypeModel:
+        return self._type_models[type_name]
 
     def set_type_model(self, type_name: str, model: SourceTypeModel) -> None:
         self._type_models[type_name] = model

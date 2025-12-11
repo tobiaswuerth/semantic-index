@@ -1,81 +1,76 @@
 import logging
 from typing import Iterator
 
-from .api.schemas import ContentSchema, SearchResultSchema, SourceSchema
+from .api import ContentSchema, SearchResultSchema, SourceSchema
 from .data import (
+    Source,
     EmbeddingRepository,
     SourceHandlerRepository,
     SourceRepository,
     SourceTypeRepository,
     init_db,
 )
-from .data import Source
 from .embeddings import EmbeddingFactory
 from .services import ProcessingService, SearchService
-from .sources import FileSourceHandler, Resolver
-from .sources.base_handler import BaseSourceHandler
+from .sources import Resolver, BaseSourceHandler, FileSourceHandler, JiraSourceHandler
 
 
 class Manager:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
-        init_db()
+        self._embedding_factory = None
+        self._processing_service = None
+        self._search_service = None
 
+        init_db()
         self._source_repo = SourceRepository()
         self._embedding_repo = EmbeddingRepository()
         self._handler_repo = SourceHandlerRepository()
         self._type_repo = SourceTypeRepository()
-        self._embedding_factory = EmbeddingFactory()
 
         self._resolver = Resolver(
             handler_repo=self._handler_repo,
             type_repo=self._type_repo,
         )
         self._resolver.register(FileSourceHandler())
-
-        self._processing_service = ProcessingService(
-            source_repo=self._source_repo,
-            embedding_repo=self._embedding_repo,
-            embedding_factory=self._embedding_factory,
-            resolver=self._resolver,
-        )
-
-        self._load_data()
-
-    def _load_data(self) -> None:
-        self._logger.info("Loading data from database...")
-        self._sources = self._source_repo.get_all(order_by_modified=True)
-        self._source_by_id = {s.id: s for s in self._sources}
-        self._embeddings = self._embedding_repo.get_all()
-
-        self._search_service = SearchService(
-            model=self._embedding_factory.model,
-            embeddings=self._embeddings,
-            source_lookup=self._source_by_id,
-        )
-        self._logger.info(
-            f"Loaded {len(self._sources)} sources, {len(self._embeddings)} embeddings"
-        )
-
-    @property
-    def sources(self) -> list[Source]:
-        return self._sources
+        self._resolver.register(JiraSourceHandler())
 
     @property
     def embedding_factory(self) -> EmbeddingFactory:
+        if self._embedding_factory is None:
+            self._embedding_factory = EmbeddingFactory()
         return self._embedding_factory
 
-    def process_sources(self) -> None:
-        self._processing_service.process_pending_sources(self._sources)
-        self._load_data()
+    @property
+    def processing_service(self) -> ProcessingService:
+        if self._processing_service is None:
+            self._processing_service = ProcessingService(
+                source_repo=self._source_repo,
+                embedding_repo=self._embedding_repo,
+                embedding_factory=self.embedding_factory,
+                resolver=self._resolver,
+            )
+        return self._processing_service
+
+    @property
+    def search_service(self) -> SearchService:
+        if self._search_service is None:
+            self._search_service = SearchService(
+                embedding_repo=self._embedding_repo,
+                source_repo=self._source_repo,
+                embedding_factory=self.embedding_factory,
+            )
+        return self._search_service
+
+    def process_sources(self) -> tuple[int, int]:
+        sources = self._source_repo.get_all(order_by_modified=True)
+        return self.processing_service.process_pending_sources(sources)
 
     def ingest_sources(self, sources: Iterator[Source]) -> int:
-        count = self._processing_service.ingest_sources(sources)
-        self._load_data()
-        return count
+        return self.processing_service.ingest_sources(sources)
 
     def find_knn_chunks(self, query: str, k: int = 10) -> list[SearchResultSchema]:
-        results = self._search_service.search_chunks(query, k)
+        results = self.search_service.search_chunks(query, k)
         return [
             SearchResultSchema(
                 source=SourceSchema.model_validate(r.source),
@@ -86,7 +81,7 @@ class Manager:
         ]
 
     def find_knn_docs(self, query: str, k: int = 10) -> list[SearchResultSchema]:
-        results = self._search_service.search_documents(query, k)
+        results = self.search_service.search_documents(query, k)
         return [
             SearchResultSchema(
                 source=SourceSchema.model_validate(r.source),
@@ -101,11 +96,11 @@ class Manager:
         if emb is None:
             raise KeyError(f"Embedding {embedding_id} not found")
 
-        source = self._source_by_id.get(emb.source_id)
+        source = self._source_repo.get_by_id(emb.source_id)
         if source is None:
             raise KeyError(f"Source for embedding {embedding_id} not found")
 
-        content = self._processing_service.read_chunk_content(source, emb.chunk_idx)
+        content = self.processing_service.read_chunk_content(source, emb.chunk_idx)
         return ContentSchema(section=content)
 
     def get_handler(self, name: str) -> "BaseSourceHandler | None":

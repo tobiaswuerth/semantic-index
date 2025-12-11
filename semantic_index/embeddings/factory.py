@@ -8,19 +8,14 @@ from .model_gte import GTEEmbeddingModel
 from .model_remote import RemoteEmbeddingModel
 
 
-def create_embedding_model() -> BaseEmbeddingModel:
-    if config.embedding_factory.process_remote:
-        return RemoteEmbeddingModel()
-    return GTEEmbeddingModel()
-
-
 class EmbeddingFactory:
-    def __init__(self, model: BaseEmbeddingModel | None = None):
-        self._model = model or create_embedding_model()
+    def __init__(self):
+        self._model = self.create_embedding_model()
 
-    @property
-    def model(self) -> BaseEmbeddingModel:
-        return self._model
+    def create_embedding_model(self) -> BaseEmbeddingModel:
+        if config.embedding_factory.process_remote:
+            return RemoteEmbeddingModel()
+        return GTEEmbeddingModel()
 
     def process(self, content: str, source: Source) -> list[Embedding]:
         assert source.id is not None, "Source ID must be set before processing."
