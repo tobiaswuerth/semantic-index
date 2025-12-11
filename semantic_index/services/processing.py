@@ -1,6 +1,7 @@
 import logging
 from typing import Iterator
 import tqdm
+import traceback
 
 from ..data import Source, EmbeddingRepository, SourceRepository
 from ..embeddings import chunk_text
@@ -59,7 +60,7 @@ class ProcessingService:
                 source.error = True
                 source.error_message = str(e)
                 self._source_repo.update(source)
-                logger.error(f"Error processing {source.uri}: {e}")
+                logger.error(f"Error processing {source.uri}: {e}\n{traceback.format_exc()}")
 
         logger.info(f"{ok} ok, {error} errors occurred.")
         logger.info("Processing complete.")
