@@ -23,4 +23,9 @@ async def generate_embedding(request: EmbeddingRequest):
     return model._encode_batch(request.batch).tolist()
 
 
+@app.get("/")
+def root():
+    return {"ok": True}
+
+
 # To run: uvicorn embedding_factory:app --host 0.0.0.0 --port 8000
