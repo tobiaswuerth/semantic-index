@@ -13,7 +13,6 @@ Create a searchable semantic index to find documents and sites.
 
 ```
 usage: index.py [-h] [--ingest HANDLER SOURCE] [--process] [--search QUERY] [--kcount KCOUNT]
-                [--arg KEY=VALUE]
 
 Semantic Index Manager
 
@@ -27,8 +26,6 @@ options:
                         Find k-nearest neighbors for the query
   --kcount KCOUNT, -kc KCOUNT
                         Number of results to return for KNN search (default: 5)
-  --arg KEY=VALUE, -a KEY=VALUE
-                        Handler-specific arguments as key=value pairs (can be used multiple times, e.g., -a key=my_api_key -a project=MYPROJ)
 ```
 
 ### Examples
