@@ -111,7 +111,7 @@ Host API by running:
 ```bash
 uvicorn backend:app --host 0.0.0.0 --port 5000
 ```
-this should start a server, e.g. on http://localhost:5000/.
+this should start a server, e.g. on http://localhost:5000/api/.
 
 #### Embedding Factory
 If the webserver that handles the data and REST API does not have a GPU, invoking the embedding model might result in suboptimal performance. One can host an embedding factory separately by running:

@@ -15,6 +15,11 @@ from .dto import (
 router = APIRouter(prefix="/api")
 
 
+@router.get("/", response_model=dict)
+async def root():
+    return {"message": "Semantic Index API is running."}
+
+
 def _search_with_date_filter(
     request: SearchRequest,
     target_fn: Callable[[str, SearchDateFilter, int], list[SearchResponse]],
