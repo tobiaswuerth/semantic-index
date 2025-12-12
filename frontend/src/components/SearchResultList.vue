@@ -51,9 +51,9 @@ const {
     </div>
 
     <div v-if="searchResults.length > 0">
-        <SearchResultItem v-for="result in searchResults" :key="result.embedding_id" :result="result"
-            :collapsed="collapsedState[result.embedding_id]" :loading-state="loadingState" :content-cache="contentCache"
-            @update:collapsed="(v) => onPanelToggle(v, result.embedding_id)" />
+        <SearchResultItem v-for="result in searchResults" :key="result.embedding.id" :result="result"
+            :collapsed="collapsedState[result.embedding.id]" :loading-state="loadingState" :content-cache="contentCache"
+            @update:collapsed="(v) => onPanelToggle(v, result.embedding.id)" />
     </div>
     <div v-else-if="!isSearching">
         <div style="text-align: center;">

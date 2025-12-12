@@ -1,10 +1,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { usePopup } from '@/composables/usePopup'
 import { getContentByEmbeddingId } from '@/composables/useAPI'
-import type { KnnSearchResult } from '@/composables/useAPI'
+import type { SearchResult } from "../dto/searchResult"
 import { useRouter } from 'vue-router'
 
-export type SearchFunction = (query: string, limit: number) => Promise<KnnSearchResult[]>
+export type SearchFunction = (query: string, limit: number) => Promise<SearchResult[]>
 
 export function useSearch(searchFn: SearchFunction, limit: number = 20) {
     const { showLoading, closePopup, showError } = usePopup()
@@ -12,7 +12,7 @@ export function useSearch(searchFn: SearchFunction, limit: number = 20) {
 
     const searchQuery = ref('')
     const isSearching = ref(false)
-    const searchResults = ref<KnnSearchResult[]>([])
+    const searchResults = ref<SearchResult[]>([])
     const collapsedState = reactive<Record<number, boolean>>({})
     const loadingState = reactive<Record<number, boolean>>({})
     const contentCache = reactive<Record<number, string>>({})
@@ -31,8 +31,8 @@ export function useSearch(searchFn: SearchFunction, limit: number = 20) {
                 searchResults.value = results
 
                 results.forEach(result => {
-                    if (collapsedState[result.embedding_id] === undefined) {
-                        collapsedState[result.embedding_id] = true
+                    if (collapsedState[result.embedding.id] === undefined) {
+                        collapsedState[result.embedding.id] = true
                     }
                 })
                 closePopup()

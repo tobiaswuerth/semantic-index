@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { KnnSearchResult } from '@/composables/useAPI'
+import type { SearchResult } from "@/dto/searchResult";
 import { useToast } from "primevue/usetoast";
 const toast = useToast();
 
 interface Props {
-  result: KnnSearchResult
+  result: SearchResult
   collapsed: boolean
   loadingState: Record<number, boolean>
   contentCache: Record<number, string>
@@ -19,7 +19,7 @@ const formatDate = (dateString?: string) => {
   if (!dateString) return 'No date'
   return dateString.split('T')[0]
 }
-const handleResolveLink = (source: KnnSearchResult['source']) => {
+const handleResolveLink = (source: SearchResult['source']) => {
   const link = source.resolved_to || source.uri
   // link, open
   if (link.startsWith('http://') || link.startsWith('https://')) {
@@ -61,7 +61,7 @@ const handleResolveLink = (source: KnnSearchResult['source']) => {
       </div>
     </template>
 
-    <div v-if="props.loadingState[props.result.embedding_id]" class="loading-container">
+    <div v-if="props.loadingState[props.result.embedding.id]" class="loading-container">
       <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="6" />
     </div>
     <div v-else class="content-preview">
@@ -78,8 +78,14 @@ const handleResolveLink = (source: KnnSearchResult['source']) => {
         <small v-tooltip="'Last Processed'">
           <span class="pi pi-file-export"></span> {{ formatDate(props.result.source.last_processed) }}
         </small>
+        <div v-if="props.result.source.last_processed < props.result.source.obj_modified">
+          <Badge severity="warn" size="small"
+            v-tooltip="'This source has been modified since it was last processed. The content may be outdated.'">
+            <span class="pi pi-exclamation-triangle"></span> Outdated
+          </Badge>
+        </div>
       </div>
-      <p> {{ props.contentCache[props.result.embedding_id] }} </p>
+      <p> {{ props.contentCache[props.result.embedding.id] }} </p>
     </div>
   </Panel>
 </template>

@@ -1,18 +1,12 @@
 import logging
-from dataclasses import dataclass
 import numpy as np
 
-from ..data import Embedding, Source, EmbeddingRepository, SourceRepository
+from ..data import Embedding, EmbeddingRepository, SourceRepository
 from ..embeddings import get_similarities, EmbeddingFactory
+from ..api import SearchDateFilter, SearchResponse
+
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class SearchResult:
-    source: Source
-    embedding: Embedding
-    similarity: float
 
 
 class SearchService:
@@ -26,55 +20,75 @@ class SearchService:
         self._source_repo = source_repo
         self._embedding_factory = embedding_factory
 
-    def search_chunks(self, query: str, k: int = 10) -> list[SearchResult]:
-        embeddings = self._embedding_repo.get_all()
+    def _get_similar_embeddings(
+        self,
+        query: str,
+        filter: SearchDateFilter,
+    ) -> tuple[list[Embedding], np.ndarray, np.ndarray]:
+        embeddings = self._embedding_repo.get_dated(filter)
         if not embeddings:
-            return []
+            return [], np.array([]), np.array([])
 
         query_emb = self._embedding_factory.model.encode([query])[0]
         emb_matrix = np.vstack([e.embedding for e in embeddings])
         similarities, indices = get_similarities(query_emb, emb_matrix)
+        return embeddings, similarities, indices
 
-        results: list[SearchResult] = []
+    def search_chunks(
+        self,
+        query: str,
+        filter: SearchDateFilter,
+        k: int = 10,
+    ) -> list[SearchResponse]:
+        embeddings, similarities, indices = self._get_similar_embeddings(query, filter)
+        if not embeddings:
+            return []
+
+        results: list[SearchResponse] = []
         top_indices: list[int] = indices[:k].tolist()
         for idx in top_indices:
             emb = embeddings[idx]
             source = self._source_repo.get_by_id(emb.source_id)
-            if source:
-                results.append(
-                    SearchResult(
-                        source=source,
-                        embedding=emb,
-                        similarity=float(similarities[idx]),
-                    )
+            assert source
+            results.append(
+                SearchResponse(
+                    source=source,
+                    embedding=emb,
+                    similarity=float(similarities[idx]),
                 )
+            )
         return results
 
-    def search_documents(self, query: str, k: int = 10) -> list[SearchResult]:
-        embeddings = self._embedding_repo.get_all()
+    def search_documents(
+        self,
+        query: str,
+        filter: SearchDateFilter,
+        k: int = 10,
+    ) -> list[SearchResponse]:
+        embeddings, similarities, indices = self._get_similar_embeddings(query, filter)
         if not embeddings:
             return []
 
-        query_emb = self._embedding_factory.model.encode([query])[0]
-        emb_matrix = np.vstack([e.embedding for e in embeddings])
-        similarities, indices = get_similarities(query_emb, emb_matrix)
-
         seen_sources: set[int] = set()
-        results: list[SearchResult] = []
+        results: list[SearchResponse] = []
         all_indices: list[int] = indices.tolist()
         for idx in all_indices:
             if len(results) >= k:
                 break
+
             emb = embeddings[idx]
-            if emb.source_id not in seen_sources:
-                source = self._source_repo.get_by_id(emb.source_id)
-                if source:
-                    seen_sources.add(emb.source_id)
-                    results.append(
-                        SearchResult(
-                            source=source,
-                            embedding=emb,
-                            similarity=float(similarities[idx]),
-                        )
-                    )
+            if emb.source_id in seen_sources:
+                continue
+
+            source = self._source_repo.get_by_id(emb.source_id)
+            assert source
+
+            seen_sources.add(emb.source_id)
+            results.append(
+                SearchResponse(
+                    source=source,
+                    embedding=emb,
+                    similarity=float(similarities[idx]),
+                )
+            )
         return results

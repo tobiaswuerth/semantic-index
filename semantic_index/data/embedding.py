@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
 from .database import Base, get_session, SessionFactory
+from ..api import SearchDateFilter
 
 if TYPE_CHECKING:
     from .source import Source
@@ -77,3 +78,22 @@ class EmbeddingRepository:
                 ),
             )
             return result.rowcount if result.rowcount else 0
+
+    def get_dated(self, filter: SearchDateFilter) -> list[Embedding]:
+        from .source import Source  # Avoid circular import
+
+        with self._session_factory() as session:
+            query = select(Embedding).join(Embedding.source)
+            if filter.createdate_start:
+                query = query.where(Source.obj_created >= filter.createdate_start)
+            if filter.createdate_end:
+                query = query.where(Source.obj_created <= filter.createdate_end)
+            if filter.modifieddate_start:
+                query = query.where(Source.obj_modified >= filter.modifieddate_start)
+            if filter.modifieddate_end:
+                query = query.where(Source.obj_modified <= filter.modifieddate_end)
+
+            embeddings = list(session.execute(query).scalars().all())
+            for emb in embeddings:
+                session.expunge(emb)
+            return embeddings

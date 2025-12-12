@@ -14,9 +14,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
 
 from .database import Base, get_session, SessionFactory
+from .embedding import Embedding
 
 if TYPE_CHECKING:
-    from .embedding import Embedding
     from .source_handler import SourceHandler
     from .source_type import SourceType
 
@@ -138,9 +138,12 @@ class SourceRepository:
             if not min_date or not min_date[0]:
                 return []
 
+            # query all Sources that have at least one embedding
             formatted_date = func.strftime(date_format, date_field)
             stmt = (
-                select(formatted_date, func.count(Source.id))
+                select(formatted_date, func.count(func.distinct(Source.id)))
+                .select_from(Source)
+                .join(Embedding, Embedding.source_id == Source.id)
                 .group_by(formatted_date)
                 .order_by(formatted_date.asc())
             )

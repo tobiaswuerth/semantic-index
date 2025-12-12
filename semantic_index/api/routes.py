@@ -1,58 +1,60 @@
 from fastapi import APIRouter, Depends, HTTPException
+from typing import Callable
 
 from .manager import Manager, get_manager
-from .schemas import ContentSchema, SearchQueryRequest, SearchResultSchema, SourceSchema
+from .dto import (
+    SourceSchema,
+    EmbeddingSchema,
+    SearchRequest,
+    SearchDateFilter,
+    SearchResponse,
+    ReadContentResult,
+)
+
 
 router = APIRouter(prefix="/api")
 
 
-@router.post(
-    "/search_knn_chunks_by_query",
-    response_model=list[SearchResultSchema],
-)
+def _search_with_date_filter(
+    request: SearchRequest,
+    target_fn: Callable[[str, SearchDateFilter, int], list[SearchResponse]],
+) -> list[SearchResponse]:
+    results = target_fn(request.query, request.date_filter, request.limit)
+    return [
+        SearchResponse(
+            source=SourceSchema.model_validate(r.source),
+            embedding=EmbeddingSchema.model_validate(r.embedding),
+            similarity=r.similarity,
+        )
+        for r in results
+    ]
+
+
+@router.post("/search_knn_chunks_by_query", response_model=list[SearchResponse])
 async def search_knn_chunks_by_query(
-    request: SearchQueryRequest,
+    request: SearchRequest,
     manager: Manager = Depends(get_manager),
-) -> list[SearchResultSchema]:
-    results = manager.search_service.search_chunks(request.query, request.limit)
-    return [
-        SearchResultSchema(
-            source=SourceSchema.model_validate(r.source),
-            similarity=r.similarity,
-            embedding_id=r.embedding.id,
-        )
-        for r in results
-    ]
+) -> list[SearchResponse]:
+    return _search_with_date_filter(request, manager.search_service.search_chunks)
 
 
-@router.post(
-    "/search_knn_docs_by_query",
-    response_model=list[SearchResultSchema],
-)
+@router.post("/search_knn_docs_by_query", response_model=list[SearchResponse])
 async def search_knn_docs_by_query(
-    request: SearchQueryRequest,
+    request: SearchRequest,
     manager: Manager = Depends(get_manager),
-) -> list[SearchResultSchema]:
-    results = manager.search_service.search_documents(request.query, request.limit)
-    return [
-        SearchResultSchema(
-            source=SourceSchema.model_validate(r.source),
-            similarity=r.similarity,
-            embedding_id=r.embedding.id,
-        )
-        for r in results
-    ]
+) -> list[SearchResponse]:
+    return _search_with_date_filter(request, manager.search_service.search_documents)
 
 
 @router.get(
     "/read_content_by_embedding_id/{embedding_id}",
-    response_model=ContentSchema,
+    response_model=ReadContentResult,
 )
 async def read_content_by_embedding_id(
     embedding_id: int,
     manager: Manager = Depends(get_manager),
-) -> ContentSchema:
-    if embedding_id <= 0:
+) -> ReadContentResult:
+    if embedding_id < 0:
         raise HTTPException(status_code=400, detail="Invalid embedding ID")
 
     emb = manager.repo_embedding.get_by_id(embedding_id)
@@ -64,7 +66,7 @@ async def read_content_by_embedding_id(
         raise KeyError(f"Source for embedding {embedding_id} not found")
 
     content = manager.processing_service.read_chunk_content(source, emb.chunk_idx)
-    return ContentSchema(section=content)
+    return ReadContentResult(section=content)
 
 
 @router.get(

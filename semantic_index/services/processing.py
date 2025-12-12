@@ -5,10 +5,9 @@ import traceback
 from datetime import datetime
 
 from ..data import Source, EmbeddingRepository, SourceRepository
-from ..embeddings import chunk_text
-from ..embeddings.factory import EmbeddingFactory
-from ..sources.base_handler import BaseSourceHandler
-from ..sources.resolver import Resolver
+from ..embeddings import chunk_text, EmbeddingFactory
+from ..sources import BaseSourceHandler, Resolver
+
 
 logger = logging.getLogger(__name__)
 

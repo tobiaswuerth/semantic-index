@@ -1,15 +1,8 @@
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .dto import *
 from .routes import router
-from .schemas import (
-    SourceTypeSchema,
-    SourceSchema,
-    SearchResultSchema,
-    ContentSchema,
-    SearchQueryRequest,
-)
 from .manager import Manager, get_manager
 
 
