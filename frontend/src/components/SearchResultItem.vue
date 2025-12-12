@@ -61,8 +61,8 @@ const handleResolveLink = (source: SearchResult['source']) => {
       </div>
     </template>
 
-    <div v-if="props.loadingState[props.result.embedding.id]" class="loading-container">
-      <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="6" />
+    <div v-if="props.loadingState[props.result.embedding.id]">
+      <ProgressBar mode="indeterminate" style="height: 4px"></ProgressBar>
     </div>
     <div v-else class="content-preview">
       <div class="source-dates">
@@ -120,12 +120,6 @@ const handleResolveLink = (source: SearchResult['source']) => {
   flex-grow: 1;
   font-weight: 600;
   word-break: break-all;
-}
-
-.loading-container {
-  display: flex;
-  justify-content: center;
-  padding: 2rem 0;
 }
 
 .content-preview {
