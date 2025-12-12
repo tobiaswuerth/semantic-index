@@ -18,7 +18,7 @@ const state = reactive({
   filterModifyDateRange: null as DateRange | null,
 
   sourceTypesData: null as SourceTypeCount[] | null,
-  filterSourceTypes: [] as number[],
+  filterSourceTypes: null as number[] | null,
 
   showDrawer: false,
 })
@@ -32,7 +32,7 @@ const totalFiltersActive = computed(() => {
     count += 1
   }
   if (state.sourceTypesData) {
-    count += state.sourceTypesData.length - state.filterSourceTypes.length
+    count += state.sourceTypesData.length - (state.filterSourceTypes?.length ?? 0)
   }
   return count
 })

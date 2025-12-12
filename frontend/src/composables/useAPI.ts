@@ -21,7 +21,7 @@ async function _search(target_url: string, query: string, limit: number = 10): P
             modifieddate_start: filterState.filterModifyDateRange?.startDate ?? null,
             modifieddate_end: filterState.filterModifyDateRange?.endDate ?? null,
         },
-        source_type_ids: [...(filterState.filterSourceTypes ?? [])],
+        source_type_ids: filterState.filterSourceTypes == null ? null : [...filterState.filterSourceTypes],
     };
     console.log('Search request body:', body);
 

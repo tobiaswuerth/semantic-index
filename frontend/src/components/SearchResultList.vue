@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { useSearch, type SearchFunction } from '@/composables/useSearch'
-import { getCreateDateHistogram, getModifyDateHistogram } from '@/composables/useAPI'
 import SearchResultItem from './SearchResultItem.vue'
-import HistDateRangeSelector from './HistDateRangeSelector.vue'
-
 import { useFilter } from '@/composables/useFilter';
 const { showDrawer, totalFiltersActive } = useFilter();
 

@@ -1,13 +1,14 @@
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List
 
 from .search_date_filter import SearchDateFilter
 
 
 class SearchRequest(BaseModel):
-    query: str
+    query: str = Field(...)
     limit: int = Field(default=10, ge=1, le=100)
-    date_filter: SearchDateFilter = Field()
-    source_type_ids: list[int] = Field(default_factory=list)
+    date_filter: SearchDateFilter = Field(...)
+    source_type_ids: Optional[List[int]] = Field(default=None)
 
     @field_validator("query")
     @classmethod

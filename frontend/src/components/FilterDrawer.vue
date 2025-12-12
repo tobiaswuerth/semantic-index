@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { DateRange } from '@/composables/useFilter';
 import type { SourceTypeCount } from '@/dto/sourceTypeCount';
@@ -50,9 +50,10 @@ const cancel = () => {
 };
 
 const sourceTypeData = ref<SourceTypeCount[] | null>(null);
-const sourceTypeLoading = ref<boolean>(true);
+const sourceTypeLoading = ref<boolean>(false);
 
 const loadSourceTypes = async () => {
+    sourceTypeLoading.value = true;
     sourceTypeData.value = await getSourceTypesData();
     sourceTypeLoading.value = false;
 };
@@ -60,8 +61,12 @@ const reset = () => {
     filterSourceTypes.value = sourceTypeData.value?.map(stype => stype.source_type.id) || [];
 };
 
-onMounted(() => {
-    loadSourceTypes();
+watch(showDrawer, (newVal) => {
+    if (newVal) {
+        if (!sourceTypeLoading.value && sourceTypeData.value === null) {
+            loadSourceTypes();
+        }
+    }
 });
 
 </script>
@@ -89,7 +94,13 @@ onMounted(() => {
                         v-tooltip="'Reset Filter'" />
                 </div>
                 <div v-if="sourceTypeLoading">
-                    <span class="pi pi-spin pi-spinner"></span> Loading histogram...
+                    <div v-for="value in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="value">
+                        <div class="placeholder">
+                            <Skeleton width="1.4rem" height="1.35rem"></Skeleton>
+                            <Skeleton width="2.8rem" height="1.35rem"></Skeleton>
+                            <Skeleton width="5.6rem" height="1.35rem"></Skeleton>
+                        </div>
+                    </div>
                 </div>
                 <div v-else>
                     <div v-for="stype in sourceTypeData" :key="stype.source_type.id" class="p-field-checkbox">
@@ -108,7 +119,7 @@ onMounted(() => {
         <template #footer>
             <Divider />
             <div class="action-buttons">
-                <Button label="Apply Filters" icon="pi pi-check" @click="applyFilters" />
+                <Button label="Apply Filters" icon="pi pi-check" @click="applyFilters" class="btn-main" />
                 <Button label="Cancel" icon="pi pi-times" variant="outlined" @click="showDrawer = false" />
             </div>
         </template>
@@ -121,6 +132,13 @@ onMounted(() => {
     align-items: center;
 }
 
+.placeholder {
+    margin-bottom: 0.25rem;
+    display: flex;
+    gap: 0.5rem;
+
+}
+
 .title {
     font-weight: 600;
 }
@@ -131,7 +149,7 @@ onMounted(() => {
     gap: 1rem;
 }
 
-.action-buttons:first-child {
+.btn-main {
     flex-grow: 1;
 }
 </style>
