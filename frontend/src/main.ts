@@ -8,13 +8,10 @@ import PrimeTheme from '@primeuix/themes/aura'
 import PrimeToast from 'primevue/toastservice'
 import PrimeTooltip from 'primevue/tooltip';
 
-
 import App from './App.vue'
 import router from './router.ts'
 
 const app = createApp(App)
-
-
 app.use(createPinia())
 app.use(router)
 

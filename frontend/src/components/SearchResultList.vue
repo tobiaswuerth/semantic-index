@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { useSearch, type SearchFunction } from '@/composables/useSearch'
+import { getCreateDateHistogram, getModifyDateHistogram } from '@/composables/useAPI'
 import SearchResultItem from './SearchResultItem.vue'
+import HistDateRangeSelector from './HistDateRangeSelector.vue'
+
+import { useFilter } from '@/composables/useFilter';
+const { showDrawer, totalFiltersActive } = useFilter();
 
 interface Props {
     title: string
@@ -19,6 +24,8 @@ const {
     handleSearch,
     onPanelToggle
 } = useSearch(props.searchFn)
+
+
 </script>
 
 <template>
@@ -29,9 +36,18 @@ const {
         <div class="p-inputgroup p-inputgroup-lg">
             <InputText v-model="searchQuery" placeholder="Enter your search query..." :disabled="isSearching"
                 @keyup.enter="handleSearch" />
-            <Button icon="pi pi-search" label="Search" :loading="isSearching"
+            <Button icon="pi pi-search" label="Search" :loading="isSearching" class="search-button"
                 :disabled="isSearching || !searchQuery.trim()" @click="handleSearch" />
         </div>
+
+        <template v-if="totalFiltersActive > 0">
+            <OverlayBadge :value="totalFiltersActive" severity="danger" size="small">
+                <Button icon="pi pi-filter" @click="showDrawer = true" />
+            </OverlayBadge>
+        </template>
+        <template v-else>
+            <Button icon="pi pi-filter" @click="showDrawer = true" />
+        </template>
     </div>
 
     <div v-if="searchResults.length > 0">
@@ -47,6 +63,10 @@ const {
 </template>
 
 <style scoped>
+.title {
+    font-weight: 600;
+}
+
 .search-header {
     text-align: center;
     margin-bottom: 1rem;
@@ -55,6 +75,8 @@ const {
 .input-group {
     display: flex;
     justify-content: center;
+    margin-bottom: 1rem;
+    gap: 0.5rem;
 }
 
 .p-inputgroup.p-inputgroup-lg {
@@ -62,7 +84,6 @@ const {
     justify-content: center;
     width: 100%;
     max-width: 700px;
-    margin-bottom: 1rem;
 }
 
 .p-inputgroup .p-inputtext {
@@ -72,9 +93,12 @@ const {
     padding: .5em 1.5rem;
 }
 
-.p-inputgroup .p-button {
+.p-button {
     font-size: 1.25rem;
-    border-radius: 0 5px 5px 0;
     padding: .5em 1.5rem;
+}
+
+.search-button {
+    border-radius: 0 5px 5px 0;
 }
 </style>

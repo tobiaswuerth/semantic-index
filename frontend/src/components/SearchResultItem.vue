@@ -66,16 +66,16 @@ const handleResolveLink = (source: KnnSearchResult['source']) => {
     </div>
     <div v-else class="content-preview">
       <div class="source-dates">
-        <small v-tooltip="'Created Date'" type="text" position="Top">
+        <small v-tooltip="'Created Date'">
           <span class="pi pi-file-plus"></span> {{ formatDate(props.result.source.obj_created) }}
         </small> /
-        <small v-tooltip="'Modified Date'" type="text" position="Top">
+        <small v-tooltip="'Modified Date'">
           <span class="pi pi-file-edit"></span> {{ formatDate(props.result.source.obj_modified) }}
         </small> /
-        <small v-tooltip="'Last Checked'" type="text" position="Top">
+        <small v-tooltip="'Last Checked'">
           <span class="pi pi-file-check"></span> {{ formatDate(props.result.source.last_checked) }}
         </small> /
-        <small v-tooltip="'Last Processed'" type="text" position="Top">
+        <small v-tooltip="'Last Processed'">
           <span class="pi pi-file-export"></span> {{ formatDate(props.result.source.last_processed) }}
         </small>
       </div>

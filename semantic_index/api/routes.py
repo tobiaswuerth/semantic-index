@@ -65,3 +65,23 @@ async def read_content_by_embedding_id(
 
     content = manager.processing_service.read_chunk_content(source, emb.chunk_idx)
     return ContentSchema(section=content)
+
+
+@router.get(
+    "/get_createdate_histogram",
+    response_model=list[tuple[str, int]],
+)
+async def get_createdate_histogram(
+    manager: Manager = Depends(get_manager),
+) -> list[tuple[str, int]]:
+    return manager.repo_source.get_createdate_histogram()
+
+
+@router.get(
+    "/get_modifydate_histogram",
+    response_model=list[tuple[str, int]],
+)
+async def get_modifydate_histogram(
+    manager: Manager = Depends(get_manager),
+) -> list[tuple[str, int]]:
+    return manager.repo_source.get_modifydate_histogram()

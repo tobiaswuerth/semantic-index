@@ -1,7 +1,16 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterator, Optional, TYPE_CHECKING
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, ForeignKey, select
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    select,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
 
 from .database import Base, get_session, SessionFactory
@@ -111,3 +120,40 @@ class SourceRepository:
                 db_source.last_processed = source.last_processed
                 db_source.error = source.error
                 db_source.error_message = source.error_message
+
+    def get_createdate_histogram(self) -> list[tuple[str, int]]:
+        return self._get_date_histogram(Source.obj_created, "%Y-%m", 21)
+
+    def get_modifydate_histogram(self) -> list[tuple[str, int]]:
+        return self._get_date_histogram(Source.obj_modified, "%Y-%m", 21)
+
+    def _get_date_histogram(
+        self,
+        date_field: Mapped[datetime],
+        date_format: str,
+        fill_gap_interval_days: int,
+    ) -> list[tuple[str, int]]:
+        with self._session_factory() as session:
+            min_date = session.execute(select(func.min(date_field))).first()
+            if not min_date or not min_date[0]:
+                return []
+
+            formatted_date = func.strftime(date_format, date_field)
+            stmt = (
+                select(formatted_date, func.count(Source.id))
+                .group_by(formatted_date)
+                .order_by(formatted_date.asc())
+            )
+            results = session.execute(stmt).all()
+            db_counts = {row[0]: row[1] for row in results if row[0]}
+
+        final_histogram = {}
+        todate = datetime.now()
+        current_date = min_date[0]
+        while current_date <= todate:
+            key = current_date.strftime(date_format)
+            final_histogram[key] = db_counts.get(key, 0)
+            current_date += timedelta(days=fill_gap_interval_days)
+
+        final_histogram = sorted(final_histogram.items(), key=lambda x: x[0])
+        return final_histogram
