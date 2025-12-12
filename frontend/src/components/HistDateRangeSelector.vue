@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef, computed } from 'vue'
+import { ref, onMounted, useTemplateRef, computed, nextTick } from 'vue'
 import type { DateRange } from '@/composables/useFilter';
 import * as echarts from 'echarts';
 
@@ -21,9 +21,6 @@ const chartContainer = useTemplateRef('chart-div');
 let chart: echarts.EChartsType | null = null;
 
 const initChart = async () => {
-    isLoadingData.value = true;
-    const data_promise = props.fetchHistogramFn()
-
     const isDark = document.documentElement.classList.contains('dark');
     chart = echarts.init(chartContainer.value, isDark ? 'dark' : 'light');
 
@@ -52,7 +49,6 @@ const initChart = async () => {
         updateRangeSelection(params.start, params.end);
     });
 
-    histData.value = await data_promise;
     updateRangeSelection(props.rangeSelection.startPercent, props.rangeSelection.endPercent);
 
     const option = {
@@ -77,7 +73,9 @@ const initChart = async () => {
                 bottom: -3,
                 top: -16,
                 borderColor: 'transparent',
-                textStyle: null,
+                textStyle: {
+                    color: 'transparent'
+                },
             }
         ],
         series: [
@@ -91,7 +89,6 @@ const initChart = async () => {
         ],
     };
     chart.setOption(option);
-    isLoadingData.value = false
 }
 const reset = () => {
     if (!chart) {
@@ -118,22 +115,33 @@ const entriesInDataRange = computed(() => {
     return total;
 })
 
-onMounted(() => {
-    initChart()
+onMounted(async () => {
+    histData.value = await props.fetchHistogramFn();
+    isLoadingData.value = false;
+    await nextTick();
+    initChart();
 })
 </script>
 
 <template>
-    <div>
+    <div class="hist-date-range-selector">
         <div class="date-range-header">
             <h4> {{ props.title }}</h4>
-            <Button variant="text" icon="pi pi-refresh" size="small" @click="reset" />
+            <Button variant="text" icon="pi pi-refresh" size="small" @click="reset" v-tooltip="'Reset Filter'" />
             <small>({{ entriesInDataRange }} Sources)</small>
         </div>
         <div v-if="isLoadingData">
-            <span class="pi pi-spin pi-spinner"></span> Loading histogram...
+            <Skeleton width="100%" height="50px"></Skeleton>
+            <div class="date-preview">
+                <span>
+                    <Skeleton width="75px" height="1.4rem"></Skeleton>
+                </span>
+                <span>
+                    <Skeleton width="75px" height="1.4rem"></Skeleton>
+                </span>
+            </div>
         </div>
-        <div v-bind:class="{ 'hidden': isLoadingData }" class="chart-container">
+        <div v-if="!isLoadingData" class="chart-container">
             <div class="chart" ref="chart-div"> </div>
             <div class="date-preview">
                 <span>{{ formatDate(rangeSelection.startDate) }}</span>
@@ -145,6 +153,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.hist-date-range-selector {
+    width: 100%;
+    margin: .5rem 0 .5rem 0;
+}
+
 .date-range-header {
     display: flex;
     align-items: center;
@@ -152,7 +165,6 @@ onMounted(() => {
 
 .chart-container {
     width: 100%;
-    margin-bottom: 1rem;
 }
 
 .chart-container .chart {
@@ -167,9 +179,5 @@ onMounted(() => {
     justify-content: space-between;
     font-size: 0.875rem;
     margin-top: 0.25rem;
-}
-
-.hidden {
-    opacity: 0;
 }
 </style>
