@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, useTemplateRef } from 'vue'
+import { ref, onMounted, useTemplateRef, computed } from 'vue'
 import type { DateRange } from '@/composables/useFilter';
 import * as echarts from 'echarts';
 
@@ -105,6 +105,19 @@ const reset = () => {
     });
 }
 
+const entriesInDataRange = computed(() => {
+    const startDate = props.rangeSelection.startDate;
+    const endDate = props.rangeSelection.endDate;
+
+    let total = 0;
+    for (const [date, count] of histData.value) {
+        if (date >= startDate && date <= endDate) {
+            total += count;
+        }
+    }
+    return total;
+})
+
 onMounted(() => {
     initChart()
 })
@@ -112,10 +125,11 @@ onMounted(() => {
 
 <template>
     <div>
-        <h4>
-            {{ props.title }}
+        <div class="date-range-header">
+            <h4> {{ props.title }}</h4>
             <Button variant="text" icon="pi pi-refresh" size="small" @click="reset" />
-        </h4>
+            <small>({{ entriesInDataRange }} Sources)</small>
+        </div>
         <div v-if="isLoadingData">
             <span class="pi pi-spin pi-spinner"></span> Loading histogram...
         </div>
@@ -131,6 +145,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.date-range-header {
+    display: flex;
+    align-items: center;
+}
+
 .chart-container {
     width: 100%;
     margin-bottom: 1rem;
