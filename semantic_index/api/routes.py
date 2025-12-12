@@ -35,7 +35,7 @@ def _search_with_date_filter(
     ]
 
 
-@router.post("/search_knn_chunks_by_query", response_model=list[SearchResponse])
+@router.post("/search/chunks", response_model=list[SearchResponse])
 async def search_knn_chunks_by_query(
     request: SearchRequest,
     manager: Manager = Depends(get_manager),
@@ -43,7 +43,7 @@ async def search_knn_chunks_by_query(
     return _search_with_date_filter(request, manager.search_service.search_chunks)
 
 
-@router.post("/search_knn_docs_by_query", response_model=list[SearchResponse])
+@router.post("/search/docs", response_model=list[SearchResponse])
 async def search_knn_docs_by_query(
     request: SearchRequest,
     manager: Manager = Depends(get_manager),
@@ -51,10 +51,7 @@ async def search_knn_docs_by_query(
     return _search_with_date_filter(request, manager.search_service.search_documents)
 
 
-@router.get(
-    "/read_content_by_embedding_id/{embedding_id}",
-    response_model=ReadContentResult,
-)
+@router.get("/emb/{embedding_id}/content", response_model=ReadContentResult)
 async def read_content_by_embedding_id(
     embedding_id: int,
     manager: Manager = Depends(get_manager),
@@ -74,20 +71,14 @@ async def read_content_by_embedding_id(
     return ReadContentResult(section=content)
 
 
-@router.get(
-    "/get_createdate_histogram",
-    response_model=list[tuple[str, int]],
-)
+@router.get("/sources/histogram/createdate", response_model=list[tuple[str, int]])
 async def get_createdate_histogram(
     manager: Manager = Depends(get_manager),
 ) -> list[tuple[str, int]]:
     return manager.repo_source.get_createdate_histogram()
 
 
-@router.get(
-    "/get_modifydate_histogram",
-    response_model=list[tuple[str, int]],
-)
+@router.get("/sources/histogram/modifydate", response_model=list[tuple[str, int]])
 async def get_modifydate_histogram(
     manager: Manager = Depends(get_manager),
 ) -> list[tuple[str, int]]:

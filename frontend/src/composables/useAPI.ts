@@ -48,7 +48,7 @@ async function _search(target_url: string, query: string, limit: number = 10): P
  * @returns Promise with array of search results
  */
 export async function searchKnnChunksByQuery(query: string, limit: number = 10): Promise<SearchResult[]> {
-    return _search(`${API_BASE_URL}/api/search_knn_chunks_by_query`, query, limit);
+    return _search(`${API_BASE_URL}/api/search/chunks`, query, limit);
 }
 
 /**
@@ -59,7 +59,7 @@ export async function searchKnnChunksByQuery(query: string, limit: number = 10):
  * @returns Promise with array of search results
  */
 export async function searchKnnDocsByQuery(query: string, limit: number = 10): Promise<SearchResult[]> {
-    return _search(`${API_BASE_URL}/api/search_knn_docs_by_query`, query, limit);
+    return _search(`${API_BASE_URL}/api/search/docs`, query, limit);
 }
 
 
@@ -71,7 +71,7 @@ export async function searchKnnDocsByQuery(query: string, limit: number = 10): P
  */
 export async function getContentByEmbeddingId(embeddingId: number): Promise<ContentResponse> {
     console.log('Fetching content for embedding ID:', embeddingId);
-    return fetch(`${API_BASE_URL}/api/read_content_by_embedding_id/${embeddingId}`)
+    return fetch(`${API_BASE_URL}/api/emb/${embeddingId}/content`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Failed to fetch content with status: ${response.status}`);
@@ -111,7 +111,7 @@ async function _getDateHistogram(endpoint: string): Promise<[Date, number][]> {
  * @returns Promise with date histogram
  */
 export async function getModifyDateHistogram(): Promise<[Date, number][]> {
-    return _getDateHistogram('get_modifydate_histogram');
+    return _getDateHistogram('sources/histogram/modifydate');
 }
 
 /**
@@ -120,5 +120,5 @@ export async function getModifyDateHistogram(): Promise<[Date, number][]> {
  * @returns Promise with date histogram
  */
 export async function getCreateDateHistogram(): Promise<[Date, number][]> {
-    return _getDateHistogram('get_createdate_histogram');
+    return _getDateHistogram('sources/histogram/createdate');
 }
