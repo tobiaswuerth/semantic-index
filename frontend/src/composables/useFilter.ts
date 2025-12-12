@@ -1,5 +1,7 @@
 import { reactive, readonly, toRef, computed } from 'vue'
-import { getCreateDateHistogram, getModifyDateHistogram } from '@/composables/useAPI'
+import { getCreateDateHistogram, getModifyDateHistogram, getSourceTypeCounts } from '@/composables/useAPI'
+import type { SourceTypeCount } from '@/dto/sourceTypeCount'
+import type { HistogramResponse } from '@/dto/histogramResponse'
 
 export interface DateRange {
   startDate: Date
@@ -9,11 +11,14 @@ export interface DateRange {
 }
 
 const state = reactive({
-  createDateHistData: null as [Date, number][] | null,
+  createDateHistData: null as HistogramResponse[] | null,
   filterCreateDateRange: null as DateRange | null,
 
-  modifyDateHistData: null as [Date, number][] | null,
+  modifyDateHistData: null as HistogramResponse[] | null,
   filterModifyDateRange: null as DateRange | null,
+
+  sourceTypesData: null as SourceTypeCount[] | null,
+  filterSourceTypes: [] as number[],
 
   showDrawer: false,
 })
@@ -25,6 +30,9 @@ const totalFiltersActive = computed(() => {
   }
   if (state.filterModifyDateRange && (state.filterModifyDateRange.startPercent > 0 || state.filterModifyDateRange.endPercent < 100)) {
     count += 1
+  }
+  if (state.sourceTypesData) {
+    count += state.sourceTypesData.length - state.filterSourceTypes.length
   }
   return count
 })
@@ -45,6 +53,14 @@ export function useFilter() {
     state.modifyDateHistData = await getModifyDateHistogram();
     return state.modifyDateHistData;
   }
+  const getSourceTypesData = async () => {
+    if (state.sourceTypesData !== null) {
+      return state.sourceTypesData
+    }
+    state.sourceTypesData = await getSourceTypeCounts();
+    state.filterSourceTypes = state.sourceTypesData.map(st => st.source_type.id);
+    return state.sourceTypesData;
+  }
 
   return {
     getCreateDateHistData,
@@ -52,6 +68,9 @@ export function useFilter() {
 
     getModifyDateHistData,
     filterModifyDateRange: toRef(state, 'filterModifyDateRange'),
+
+    getSourceTypesData,
+    filterSourceTypes: toRef(state, 'filterSourceTypes'),
 
     totalFiltersActive,
     showDrawer: toRef(state, 'showDrawer'),

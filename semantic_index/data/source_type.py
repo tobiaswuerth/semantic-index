@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import Integer, String, ForeignKey, select
+from sqlalchemy import Integer, String, ForeignKey, select, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..api import SourceTypeCount, SourceTypeSchema
 from .database import Base, get_session, SessionFactory
 
 if TYPE_CHECKING:
@@ -37,6 +38,30 @@ class SourceTypeRepository:
             for t in types:
                 session.expunge(t)
             return types
+
+    def get_all_counted(self) -> list[SourceTypeCount]:
+        from .source import Source  # avoid circular import
+        from .embedding import Embedding  # avoid circular import
+
+        with self._session_factory() as session:
+            stmt = (
+                select(SourceType, func.count(func.distinct(Embedding.source_id)))
+                .select_from(SourceType)
+                .outerjoin(Source, Source.source_type_id == SourceType.id)
+                .outerjoin(Embedding, Embedding.source_id == Source.id)
+                .group_by(SourceType.id)
+                .order_by(SourceType.name)
+            )
+
+            results = session.execute(stmt).all()
+            session.expunge_all()
+            return [
+                SourceTypeCount(
+                    source_type=SourceTypeSchema.model_validate(source_type),
+                    count=count,
+                )
+                for source_type, count in results
+            ]
 
     def get_by_name(self, name: str) -> SourceType | None:
         with self._session_factory() as session:

@@ -10,9 +10,10 @@ from sqlalchemy import (
     ForeignKey,
     select,
     func,
+    extract,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
-
+from ..api import HistogramResponse
 from .database import Base, get_session, SessionFactory
 from .embedding import Embedding
 
@@ -121,42 +122,46 @@ class SourceRepository:
                 db_source.error = source.error
                 db_source.error_message = source.error_message
 
-    def get_createdate_histogram(self) -> list[tuple[str, int]]:
-        return self._get_date_histogram(Source.obj_created, "%Y-%m", 21)
+    def get_createdate_histogram(self) -> list[HistogramResponse]:
+        return self._get_date_histogram(Source.obj_created)
 
-    def get_modifydate_histogram(self) -> list[tuple[str, int]]:
-        return self._get_date_histogram(Source.obj_modified, "%Y-%m", 21)
+    def get_modifydate_histogram(self) -> list[HistogramResponse]:
+        return self._get_date_histogram(Source.obj_modified)
 
-    def _get_date_histogram(
-        self,
-        date_field: Mapped[datetime],
-        date_format: str,
-        fill_gap_interval_days: int,
-    ) -> list[tuple[str, int]]:
+    def _get_date_histogram(self, field: Mapped[datetime]) -> list[HistogramResponse]:
         with self._session_factory() as session:
-            min_date = session.execute(select(func.min(date_field))).first()
-            if not min_date or not min_date[0]:
+            # get global min date
+            min_date_row = session.execute(select(func.min(field))).first()
+            min_date = min_date_row[0] if min_date_row else None
+            if not min_date:
                 return []
 
-            # query all Sources that have at least one embedding
-            formatted_date = func.strftime(date_format, date_field)
+            # count distinct processed sources per year-month
+            year_col = extract("year", field).label("year")
+            month_col = extract("month", field).label("month")
             stmt = (
-                select(formatted_date, func.count(func.distinct(Source.id)))
+                select(year_col, month_col, func.count(func.distinct(Source.id)))
                 .select_from(Source)
                 .join(Embedding, Embedding.source_id == Source.id)
-                .group_by(formatted_date)
-                .order_by(formatted_date.asc())
+                .group_by(year_col, month_col)
+                .order_by(year_col.asc(), month_col.asc())
             )
             results = session.execute(stmt).all()
-            db_counts = {row[0]: row[1] for row in results if row[0]}
+            session.expunge_all()
 
-        final_histogram = {}
+        # reconstruct into full histogram with filled gaps
+        db_counts = {
+            f"{int(year)}-{int(month):02d}": count  # YYYY-MM
+            for year, month, count in results
+        }
+        hist = {}
         todate = datetime.now()
-        current_date = min_date[0]
+        current_date = min_date.replace(day=1)
         while current_date <= todate:
-            key = current_date.strftime(date_format)
-            final_histogram[key] = db_counts.get(key, 0)
-            current_date += timedelta(days=fill_gap_interval_days)
+            key = current_date.strftime("%Y-%m")  # YYYY-MM
+            hist[key] = db_counts.get(key, 0)
+            current_date += timedelta(days=25)  # go to next month
 
-        final_histogram = sorted(final_histogram.items(), key=lambda x: x[0])
-        return final_histogram
+        # Sort and return
+        hist_items = sorted(hist.items(), key=lambda x: x[0])
+        return [HistogramResponse(bucket=key, count=count) for key, count in hist_items]

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SearchResult } from "@/dto/searchResult";
 import { useToast } from "primevue/usetoast";
+import SourceTypeBadge from "./SourceTypeBadge.vue";
 const toast = useToast();
 
 interface Props {
@@ -44,8 +45,7 @@ const handleResolveLink = (source: SearchResult['source']) => {
     <template #header>
       <div class="header-content">
         <strong>{{ props.result.source.title }}</strong>
-        <Badge :value="props.result.source.source_type.name" size="small" class="source-type"
-          :data-value="props.result.source.source_type.name"></Badge>
+        <SourceTypeBadge :sourceType="props.result.source.source_type" />
         <br />
         <small>
           <a @click="handleResolveLink(props.result.source)" class="resolve-link">
@@ -129,46 +129,6 @@ const handleResolveLink = (source: SearchResult['source']) => {
 
 .content-preview>p {
   font-style: italic;
-}
-
-.source-type {
-  margin-left: 0.5rem;
-}
-
-.source-type[data-value="PDF"] {
-  background-color: #F44336;
-}
-
-.source-type[data-value="Word"] {
-  background-color: #3F51B5;
-}
-
-.source-type[data-value="CSV"] {
-  background-color: #45a445;
-}
-
-.source-type[data-value="Markdown"] {
-  background-color: #af934c;
-}
-
-.source-type[data-value="TXT"] {
-  background-color: #787878;
-}
-
-.source-type[data-value="Mail"] {
-  background-color: #83408f;
-}
-
-.source-type[data-value="Issue"] {
-  background-color: #0748a6;
-}
-
-.source-type[data-value="Comment"] {
-  background-color: #496790;
-}
-
-.source-type[data-value="Attachment"] {
-  background-color: #49525e;
 }
 
 .resolve-link {

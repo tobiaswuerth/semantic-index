@@ -3,7 +3,7 @@ import numpy as np
 
 from ..data import Embedding, EmbeddingRepository, SourceRepository
 from ..embeddings import get_similarities, EmbeddingFactory
-from ..api import SearchDateFilter, SearchResponse
+from ..api import SearchResponse, SearchRequest
 
 
 logger = logging.getLogger(__name__)
@@ -21,31 +21,26 @@ class SearchService:
         self._embedding_factory = embedding_factory
 
     def _get_similar_embeddings(
-        self,
-        query: str,
-        filter: SearchDateFilter,
+        self, request: SearchRequest
     ) -> tuple[list[Embedding], np.ndarray, np.ndarray]:
-        embeddings = self._embedding_repo.get_dated(filter)
+        embeddings = self._embedding_repo.get_all_with_date_and_type(
+            request.date_filter, request.source_type_ids
+        )
         if not embeddings:
             return [], np.array([]), np.array([])
 
-        query_emb = self._embedding_factory.model.encode([query])[0]
+        query_emb = self._embedding_factory.model.encode([request.query])[0]
         emb_matrix = np.vstack([e.embedding for e in embeddings])
         similarities, indices = get_similarities(query_emb, emb_matrix)
         return embeddings, similarities, indices
 
-    def search_chunks(
-        self,
-        query: str,
-        filter: SearchDateFilter,
-        k: int = 10,
-    ) -> list[SearchResponse]:
-        embeddings, similarities, indices = self._get_similar_embeddings(query, filter)
+    def search_chunks(self, request: SearchRequest) -> list[SearchResponse]:
+        embeddings, similarities, indices = self._get_similar_embeddings(request)
         if not embeddings:
             return []
 
         results: list[SearchResponse] = []
-        top_indices: list[int] = indices[:k].tolist()
+        top_indices: list[int] = indices[: request.limit].tolist()
         for idx in top_indices:
             emb = embeddings[idx]
             source = self._source_repo.get_by_id(emb.source_id)
@@ -59,13 +54,8 @@ class SearchService:
             )
         return results
 
-    def search_documents(
-        self,
-        query: str,
-        filter: SearchDateFilter,
-        k: int = 10,
-    ) -> list[SearchResponse]:
-        embeddings, similarities, indices = self._get_similar_embeddings(query, filter)
+    def search_documents(self, request: SearchRequest) -> list[SearchResponse]:
+        embeddings, similarities, indices = self._get_similar_embeddings(request)
         if not embeddings:
             return []
 
@@ -73,7 +63,7 @@ class SearchService:
         results: list[SearchResponse] = []
         all_indices: list[int] = indices.tolist()
         for idx in all_indices:
-            if len(results) >= k:
+            if len(results) >= request.limit:
                 break
 
             emb = embeddings[idx]

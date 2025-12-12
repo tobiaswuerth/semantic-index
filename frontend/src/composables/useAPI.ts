@@ -1,10 +1,12 @@
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 import type { SearchRequest } from "@/dto/searchRequest";
 import type { SearchResult } from "@/dto/searchResult";
-import { useFilter } from "@/composables/useFilter";
 import type { ContentResponse } from "../dto/contentResponse";
+import type { SourceTypeCount } from "@/dto/sourceTypeCount";
+import type { HistogramResponse, HistogramResponseString } from "@/dto/histogramResponse";
 
+import { useFilter } from "@/composables/useFilter";
 
 async function _search(target_url: string, query: string, limit: number = 10): Promise<SearchResult[]> {
     console.log(`Searching url: ${target_url}, query: ${query}, limit: ${limit}`);
@@ -18,7 +20,8 @@ async function _search(target_url: string, query: string, limit: number = 10): P
             createdate_end: filterState.filterCreateDateRange?.endDate ?? null,
             modifieddate_start: filterState.filterModifyDateRange?.startDate ?? null,
             modifieddate_end: filterState.filterModifyDateRange?.endDate ?? null,
-        }
+        },
+        source_type_ids: [...(filterState.filterSourceTypes ?? [])],
     };
     console.log('Search request body:', body);
 
@@ -48,7 +51,7 @@ async function _search(target_url: string, query: string, limit: number = 10): P
  * @returns Promise with array of search results
  */
 export async function searchKnnChunksByQuery(query: string, limit: number = 10): Promise<SearchResult[]> {
-    return _search(`${API_BASE_URL}/api/search/chunks`, query, limit);
+    return _search(`${API_BASE_URL}/search/chunks`, query, limit);
 }
 
 /**
@@ -59,7 +62,7 @@ export async function searchKnnChunksByQuery(query: string, limit: number = 10):
  * @returns Promise with array of search results
  */
 export async function searchKnnDocsByQuery(query: string, limit: number = 10): Promise<SearchResult[]> {
-    return _search(`${API_BASE_URL}/api/search/docs`, query, limit);
+    return _search(`${API_BASE_URL}/search/docs`, query, limit);
 }
 
 
@@ -71,7 +74,7 @@ export async function searchKnnDocsByQuery(query: string, limit: number = 10): P
  */
 export async function getContentByEmbeddingId(embeddingId: number): Promise<ContentResponse> {
     console.log('Fetching content for embedding ID:', embeddingId);
-    return fetch(`${API_BASE_URL}/api/emb/${embeddingId}/content`)
+    return fetch(`${API_BASE_URL}/embedding/${embeddingId}/content`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Failed to fetch content with status: ${response.status}`);
@@ -86,9 +89,9 @@ export async function getContentByEmbeddingId(embeddingId: number): Promise<Cont
 }
 
 
-async function _getDateHistogram(endpoint: string): Promise<[Date, number][]> {
+async function _getDateHistogram(endpoint: string): Promise<HistogramResponse[]> {
     console.log(`Fetching date histogram from endpoint: ${endpoint}`);
-    return fetch(`${API_BASE_URL}/api/${endpoint}`)
+    return fetch(`${API_BASE_URL}/${endpoint}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Failed to fetch content with status: ${response.status}`);
@@ -97,7 +100,10 @@ async function _getDateHistogram(endpoint: string): Promise<[Date, number][]> {
             return response.json();
         })
         .then(histJson => {
-            return histJson.map((item: any) => ([new Date(item[0] + "-01"), item[1]]));
+            return histJson.map((item: HistogramResponseString) => ({
+                bucket: new Date(item.bucket + "-01"),
+                count: item.count
+            }));
         })
         .catch(error => {
             console.error(`Error fetching date histogram from endpoint ${endpoint}:`, error);
@@ -110,8 +116,8 @@ async function _getDateHistogram(endpoint: string): Promise<[Date, number][]> {
  *
  * @returns Promise with date histogram
  */
-export async function getModifyDateHistogram(): Promise<[Date, number][]> {
-    return _getDateHistogram('sources/histogram/modifydate');
+export async function getModifyDateHistogram(): Promise<HistogramResponse[]> {
+    return _getDateHistogram('source/histogram/modifydate');
 }
 
 /**
@@ -119,6 +125,22 @@ export async function getModifyDateHistogram(): Promise<[Date, number][]> {
  *
  * @returns Promise with date histogram
  */
-export async function getCreateDateHistogram(): Promise<[Date, number][]> {
-    return _getDateHistogram('sources/histogram/createdate');
+export async function getCreateDateHistogram(): Promise<HistogramResponse[]> {
+    return _getDateHistogram('source/histogram/createdate');
+}
+
+export async function getSourceTypeCounts(): Promise<SourceTypeCount[]> {
+    console.log('Fetching source types');
+    return fetch(`${API_BASE_URL}/source_type`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to fetch source types with status: ${response.status}`);
+            }
+            console.log('Source types fetched successfully');
+            return response.json();
+        })
+        .catch(error => {
+            console.error('Error fetching source types:', error);
+            throw error;
+        });
 }

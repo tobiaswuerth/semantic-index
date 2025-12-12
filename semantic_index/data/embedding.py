@@ -79,11 +79,21 @@ class EmbeddingRepository:
             )
             return result.rowcount if result.rowcount else 0
 
-    def get_dated(self, filter: SearchDateFilter) -> list[Embedding]:
+    def get_all_with_date_and_type(
+        self,
+        filter: SearchDateFilter,
+        source_type_ids: list[int],
+    ) -> list[Embedding]:
         from .source import Source  # Avoid circular import
+        from .source_type import SourceType  # Avoid circular import
 
         with self._session_factory() as session:
-            query = select(Embedding).join(Embedding.source)
+            query = (
+                select(Embedding)
+                .join(Embedding.source)
+                .join(Source.source_type)
+                .where(SourceType.id.in_(source_type_ids))
+            )
             if filter.createdate_start:
                 query = query.where(Source.obj_created >= filter.createdate_start)
             if filter.createdate_end:

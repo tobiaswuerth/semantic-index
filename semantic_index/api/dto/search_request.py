@@ -7,6 +7,7 @@ class SearchRequest(BaseModel):
     query: str
     limit: int = Field(default=10, ge=1, le=100)
     date_filter: SearchDateFilter = Field()
+    source_type_ids: list[int] = Field(default_factory=list)
 
     @field_validator("query")
     @classmethod

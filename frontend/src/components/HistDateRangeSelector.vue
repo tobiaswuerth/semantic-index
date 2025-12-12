@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, useTemplateRef, computed, nextTick } from 'vue'
 import type { DateRange } from '@/composables/useFilter';
+import type { HistogramResponse } from '@/dto/histogramResponse';
 import * as echarts from 'echarts';
 
 
 interface Props {
     title: string
     rangeSelection: DateRange
-    fetchHistogramFn: () => Promise<[Date, number][]>
+    fetchHistogramFn: () => Promise<HistogramResponse[]>
 }
 const props = defineProps<Props>()
 
@@ -16,7 +17,7 @@ const formatDate = (date: Date): string => {
 }
 
 const isLoadingData = ref(true);
-const histData = ref<[Date, number][]>([]);
+const histData = ref<HistogramResponse[]>([]);
 const chartContainer = useTemplateRef('chart-div');
 let chart: echarts.EChartsType | null = null;
 
@@ -28,11 +29,11 @@ const initChart = async () => {
         const startIndex = Math.floor((start / 100) * (histData.value.length - 1));
         const endIndex = Math.ceil((end / 100) * (histData.value.length - 1));
 
-        const startDate = new Date(histData.value[startIndex][0]);
+        const startDate = new Date(histData.value[startIndex].bucket);
 
         // at this point end date is something like 2025-12-01, where 01 is always the first day of month
         // however, for endDate we want the last day of the month, so we need to adjust it + 1 month, -1 day
-        var endDate = new Date(histData.value[endIndex][0]);
+        var endDate = new Date(histData.value[endIndex].bucket);
         endDate.setMonth(endDate.getMonth() + 1);
         endDate.setDate(endDate.getDate() - 1);
 
@@ -81,7 +82,7 @@ const initChart = async () => {
         series: [
             {
                 type: 'line',
-                data: histData.value,
+                data: histData.value.map(entry => [entry.bucket, entry.count]),
                 showSymbol: false,
                 lineStyle: { opacity: 0 },
                 areaStyle: { opacity: 0 },
@@ -107,9 +108,9 @@ const entriesInDataRange = computed(() => {
     const endDate = props.rangeSelection.endDate;
 
     let total = 0;
-    for (const [date, count] of histData.value) {
-        if (date >= startDate && date <= endDate) {
-            total += count;
+    for (const entry of histData.value) {
+        if (entry.bucket >= startDate && entry.bucket <= endDate) {
+            total += entry.count;
         }
     }
     return total;
