@@ -157,6 +157,7 @@ class JiraSourceHandler(BaseSourceHandler):
 
         issuetype = fields.get("issuetype", {}).get("name", "N/A")
 
+        parent = None
         has_parent = "parent" in fields
         if has_parent:
             parent = fields["parent"]
@@ -229,7 +230,7 @@ class JiraSourceHandler(BaseSourceHandler):
             f"Attachments: {attachments}\n"
             f"Comments: {comments}\n"
         )
-        if has_parent:
+        if has_parent and parent:
             result += f"Parent Issue: {parent}"
 
         return result

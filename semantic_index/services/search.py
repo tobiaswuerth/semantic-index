@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from typing import Sequence
 
 from ..data import Embedding, EmbeddingRepository, SourceRepository
 from ..embeddings import get_similarities, EmbeddingFactory
@@ -22,7 +23,7 @@ class SearchService:
 
     def _get_similar_embeddings(
         self, request: SearchRequest
-    ) -> tuple[list[Embedding], np.ndarray, np.ndarray]:
+    ) -> tuple[Sequence[Embedding], np.ndarray, np.ndarray]:
         embeddings = self._embedding_repo.get_all_with_date_and_type(
             request.date_filter, request.source_type_ids
         )
