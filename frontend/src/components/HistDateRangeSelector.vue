@@ -26,9 +26,12 @@ const initChart = async () => {
     chart = echarts.init(chartContainer.value, isDark ? 'dark' : 'light');
 
     const updateRangeSelection = (start: number, end: number) => {
+        if (histData.value.length === 0) {
+            return;
+        }
+
         const startIndex = Math.floor((start / 100) * (histData.value.length - 1));
         const endIndex = Math.ceil((end / 100) * (histData.value.length - 1));
-
         const startDate = new Date(histData.value[startIndex].bucket);
 
         // at this point end date is something like 2025-12-01, where 01 is always the first day of month
