@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from semantic_index import get_manager, Manager, SearchDateFilter
+from semantic_index import get_manager, Manager, SearchRequest, SearchDateFilter
 
 
 def init_parser():
@@ -73,15 +73,17 @@ def handle_search(manager: Manager, args: argparse.Namespace):
         return
 
     logging.info(f"Finding KNN for query: {args.search} with k={args.kcount}")
-    full_range_filter = SearchDateFilter(
-        createdate_start=None,
-        createdate_end=None,
-        modifieddate_start=None,
-        modifieddate_end=None,
+    search = SearchRequest(
+        query=args.search,
+        date_filter=SearchDateFilter(
+            createdate_start=None,
+            createdate_end=None,
+            modifieddate_start=None,
+            modifieddate_end=None,
+        ),
+        limit=args.kcount,
     )
-    results = manager.search_service.search_documents(
-        args.search, full_range_filter, k=args.kcount
-    )
+    results = manager.search_service.search_documents(search)
     logging.info(f"Top {args.kcount} results for: '{args.search}'")
     for result in results:
         logging.info(
