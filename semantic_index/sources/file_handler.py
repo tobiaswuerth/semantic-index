@@ -39,7 +39,10 @@ class FileSourceHandler(BaseSourceHandler):
         for root, _, files in os.walk(base):
             for file in files:
                 path = os.path.join(root, file)
-                yield self.index_one(path)
+                try:
+                    yield self.index_one(path)
+                except Exception as e:
+                    logger.warning(f"Failed to index file {path}: {e}")
 
     def index_one(self, uri: str) -> Source:
         if not os.path.isfile(uri):
