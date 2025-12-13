@@ -131,7 +131,7 @@ onMounted(async () => {
     <div class="hist-date-range-selector">
         <div class="date-range-header">
             <h4> {{ props.title }}</h4>
-            <Button variant="text" icon="pi pi-refresh" size="small" @click="reset" v-tooltip="'Reset Filter'" />
+            <Button variant="text" icon="pi pi-refresh" size="small" @click="reset" v-tooltip.top="'Reset Filter'" />
             <small>({{ entriesInDataRange }} Sources)</small>
         </div>
         <div v-if="isLoadingData">

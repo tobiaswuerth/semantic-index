@@ -91,7 +91,7 @@ watch(showDrawer, (newVal) => {
                 <div class="source-type-filter-header">
                     <h4>Source Types</h4>
                     <Button variant="text" icon="pi pi-refresh" size="small" @click="reset"
-                        v-tooltip="'Reset Filter'" />
+                        v-tooltip.top="'Reset Filter'" />
                 </div>
                 <div v-if="sourceTypeLoading">
                     <div v-for="value in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="value">

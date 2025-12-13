@@ -43,7 +43,7 @@ const {
             </OverlayBadge>
         </template>
         <template v-else>
-            <Button icon="pi pi-filter" @click="showDrawer = true" />
+            <Button icon="pi pi-filter" @click="showDrawer = true" v-tooltip.top="'Filter'" />
         </template>
     </div>
 
