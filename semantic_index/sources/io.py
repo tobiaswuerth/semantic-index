@@ -5,11 +5,16 @@ import pymupdf
 import shutil
 import tempfile
 from pathlib import Path
+from charset_normalizer import from_bytes
 
 
 def _read_plaintext(path: str) -> str:
-    with open(path, "r", encoding="utf-8") as file:
-        return file.read()
+    with open(path, "rb") as f:
+        raw_data = f.read()
+    result = from_bytes(raw_data).best()
+    if result is None:
+        raise ValueError(f"Failed to decode file: {path}")
+    return str(result)
 
 
 def _read_docx(path: str) -> str:
@@ -33,6 +38,9 @@ extension_to_reader = {
     ".txt": _read_plaintext,
     ".md": _read_plaintext,
     ".csv": _read_plaintext,
+    ".sql": _read_plaintext,
+    ".xml": _read_plaintext,
+    ".log": _read_plaintext,
     ".docx": _read_docx,
     ".pdf": _read_pdf,
     ".msg": _read_msg,

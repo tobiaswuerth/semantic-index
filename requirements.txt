@@ -11,3 +11,4 @@ python-docx
 extract_msg
 sqlalchemy
 alembic
+charset_normalizer
