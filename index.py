@@ -9,30 +9,45 @@ def init_parser():
     parser = argparse.ArgumentParser(description="Semantic Index Manager")
 
     parser.add_argument(
-        "--ingest",
         "-i",
+        "--ingest",
         nargs=2,
         metavar=("HANDLER", "SOURCE"),
-        help="Ingest sources using the specified handler and source (e.g., -i file /path/to/folder, -i jira https://my.url/api)",
+        help="Ingest sources using the specified handler and source (e.g., -i File /path/to/folder, -i Jira https://my.url/api)",
+    )
+    parser.add_argument(
+        "-ii",
+        "--ingest-one",
+        nargs=2,
+        metavar=("HANDLER", "SOURCE"),
+        help="Ingest a single source using the specified handler and source (e.g., -ii File /path/to/file.txt, -ii Jira https://jira.company.ch/rest/api/2/issue/12345)",
     )
 
     parser.add_argument(
-        "--process",
         "-p",
+        "--process",
         action="store_true",
         help="Process all sources",
     )
 
     parser.add_argument(
-        "--search",
+        "-pp",
+        "--process-one",
+        type=int,
+        metavar="SOURCE_ID",
+        help="Process a single source by its ID",
+    )
+
+    parser.add_argument(
         "-s",
+        "--search",
         metavar="QUERY",
         help="Find k-nearest neighbors for the query",
     )
 
     parser.add_argument(
-        "--kcount",
         "-kc",
+        "--kcount",
         type=int,
         default=5,
         help="Number of results to return for KNN search (default: 5)",
@@ -52,9 +67,38 @@ def handle_ingest(manager: Manager, args: argparse.Namespace):
         logging.error(f"Handler '{handler_name}' not registered")
         sys.exit(1)
 
-    sources = handler.crawl(source_path)
+    sources = handler.index_all(source_path)
     manager.processing_service.ingest_sources(sources)
     logging.info(f"Ingested sources from {source_path}")
+    logging.info("-" * 40)
+
+
+def handle_ingest_one(manager: Manager, args: argparse.Namespace):
+    if not args.ingest_one:
+        return
+
+    # check handler
+    handler_name, source_path = args.ingest_one
+    logging.info(
+        f"Ingesting individual source {source_path} using handler '{handler_name}'"
+    )
+    handler = manager.resolver.get_handler_by_name(handler_name)
+    if handler is None:
+        logging.error(f"Handler '{handler_name}' not registered")
+        sys.exit(1)
+
+    source = handler.index_one(source_path)
+    if source is None:
+        logging.error(
+            f"Failed to crawl individual source '{source_path}' using handler '{handler_name}'"
+        )
+        sys.exit(1)
+
+    def _yield_one():
+        yield source
+
+    manager.processing_service.ingest_sources(_yield_one())
+    logging.info(f"Ingested individual source {source_path}")
     logging.info("-" * 40)
 
 
@@ -65,6 +109,22 @@ def handle_process(manager: Manager, args: argparse.Namespace):
     logging.info("Processing all sources")
     manager.processing_service.process_pending_sources()
     logging.info("Processed all sources")
+    logging.info("-" * 40)
+
+
+def handle_process_one(manager: Manager, args: argparse.Namespace):
+    if not args.process_one:
+        return
+
+    source_id = args.process_one
+    logging.info(f"Processing single source with ID {source_id}")
+    source = manager.repo_source.get_by_id(source_id)
+    if source is None:
+        logging.error(f"Source with ID {source_id} not found")
+        sys.exit(1)
+
+    manager.processing_service.process_single_source(source)
+    logging.info(f"Processed source ID {source_id} successfully")
     logging.info("-" * 40)
 
 
@@ -94,13 +154,21 @@ def handle_search(manager: Manager, args: argparse.Namespace):
 if __name__ == "__main__":
     parser = init_parser()
     args = parser.parse_args()
-    if not (args.ingest or args.process or args.search):
+    if not (
+        args.ingest
+        or args.ingest_one
+        or args.process
+        or args.process_one
+        or args.search
+    ):
         logging.error(parser.format_help())
         sys.exit(1)
 
     manager = get_manager()
     handle_ingest(manager, args)
+    handle_ingest_one(manager, args)
     handle_process(manager, args)
+    handle_process_one(manager, args)
     handle_search(manager, args)
 
     logging.info("Semantic Index Manager exiting.")

@@ -19,6 +19,9 @@ class FileSourceHandler(BaseSourceHandler):
         "Word": [".docx"],
         "PDF": [".pdf"],
         "Mail": [".msg"],
+        "SQL": [".sql"],
+        "XML": [".xml"],
+        "Log": [".log"],
     }
 
     def __init__(self):
@@ -29,42 +32,48 @@ class FileSourceHandler(BaseSourceHandler):
             for ext in ext_list
         }
 
-    def crawl(self, base: str) -> Iterator[Source]:
-        handler_model = self.get_handler_model()
-        assert handler_model
+    def index_all(self, base: str) -> Iterator[Source]:
+        if not os.path.isdir(base):
+            raise ValueError(f"Base path is not a directory: {base}")
 
-        assert os.path.isdir(base), f"Base path is not a directory: {base}"
         for root, _, files in os.walk(base):
             for file in files:
-                ext = os.path.splitext(file)[1].lower()
-                if ext not in self.ext_to_name:
-                    logger.debug(f"Skipping file with unsupported extension: {file}")
-                    continue
-
-                type_name = self.ext_to_name[ext]
-                type_model = self.source_type_by_name(type_name)
-                assert type_model
-
                 path = os.path.join(root, file)
-                stat = os.stat(path)
-                obj_created = datetime.fromtimestamp(stat.st_birthtime)
-                obj_modified = datetime.fromtimestamp(stat.st_mtime)
+                yield self.index_one(path)
 
-                logger.debug(f"Yield file: {path}")
-                yield Source(
-                    id=None,
-                    source_handler_id=handler_model.id,
-                    source_type_id=type_model.id,
-                    uri=path,
-                    resolved_to=f"file://{path}",
-                    title=file,
-                    obj_created=obj_created,
-                    obj_modified=obj_modified,
-                    last_checked=datetime.now(),
-                    last_processed=None,
-                    error=False,
-                    error_message=None,
-                )
+    def index_one(self, uri: str) -> Source:
+        if not os.path.isfile(uri):
+            raise ValueError(f"Source path is not a file: {uri}")
+
+        ext = os.path.splitext(uri)[1].lower()
+        if ext not in self.ext_to_name:
+            raise ValueError(f"Unsupported file extension: {ext}")
+
+        type_name = self.ext_to_name[ext]
+        type_model = self.source_type_by_name(type_name)
+        assert type_model
+        handler_model = self.get_handler()
+        assert handler_model
+
+        stat = os.stat(uri)
+        obj_created = datetime.fromtimestamp(stat.st_birthtime)
+        obj_modified = datetime.fromtimestamp(stat.st_mtime)
+
+        logger.debug(f"Indexing file: {uri}")
+        return Source(
+            id=None,
+            source_handler_id=handler_model.id,
+            source_type_id=type_model.id,
+            uri=uri,
+            resolved_to=f"file://{uri}",
+            title=os.path.basename(uri),
+            obj_created=obj_created,
+            obj_modified=obj_modified,
+            last_checked=datetime.now(),
+            last_processed=None,
+            error=False,
+            error_message=None,
+        )
 
     def _read_source(self, source: Source) -> str:
         ext = os.path.splitext(source.uri)[1].lower()

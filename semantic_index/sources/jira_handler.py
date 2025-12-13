@@ -35,7 +35,7 @@ class JiraSourceHandler(BaseSourceHandler):
     def _jira_search(self, base_url: str, start_at: int) -> dict:
         query = {
             "jql": "",
-            "maxResults": 1000,
+            "maxResults": 250,
             "startAt": start_at,
             "fields": "id,key,summary,created,updated,attachment,filename,comment,author",
         }
@@ -46,97 +46,129 @@ class JiraSourceHandler(BaseSourceHandler):
         # e.g. "created": "2018-11-14T10:23:58.137+0100",
         return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
 
-    def crawl(self, base: str) -> Iterator[Source]:
-        handler = self.get_handler_model()
-        assert handler
-
-        type_issue: SourceType = self.source_type_by_name("Issue")
-        type_comment: SourceType = self.source_type_by_name("Comment")
-        type_attachment: SourceType = self.source_type_by_name("Attachment")
-
-        # get all issues from Jira API
+    def index_all(self, base: str) -> Iterator[Source]:
         idx = 0
         results = [1]
         while results:
             data = self._jira_search(base, idx)
             results = data.get("issues", [])
             for issue in results:
-                issue_key = issue["key"]
-                ticket_url = f"{base}/browse/{issue_key}"
-                fields = issue["fields"]
+                issue_key = issue.get("key", None)
+                fields = issue.get("fields", {})
+                yield self._index_issue(issue["self"], issue)
 
-                # Create Source for the issue itself
-                cdate = fields["created"]
-                mdate = self.parse_date(fields.get("updated", cdate))
-                cdate = self.parse_date(cdate)
-                yield Source(
-                    id=None,
-                    source_handler_id=handler.id,
-                    source_type_id=type_issue.id,
-                    uri=issue["self"],
-                    resolved_to=ticket_url,
-                    title=f"Jira {issue_key}: {fields['summary']}",
-                    obj_created=cdate,
-                    obj_modified=mdate,
-                    last_checked=datetime.now(),
-                    last_processed=None,
-                    error=False,
-                    error_message=None,
-                )
+                for comment in fields.get("comment", {}).get("comments", []):
+                    yield self._index_comment(comment["self"], comment, issue_key)
 
-                # Create Sources for comments
-                comments = fields.get("comment", {}).get("comments", [])
-                for comment in comments:
-                    comment_id = comment["id"]
-
-                    cdate = comment["created"]
-                    mdate = self.parse_date(comment.get("updated", cdate))
-                    cdate = self.parse_date(cdate)
-                    yield Source(
-                        id=None,
-                        source_handler_id=handler.id,
-                        source_type_id=type_comment.id,
-                        uri=comment["self"],
-                        resolved_to=f"{ticket_url}?focusedCommentId={comment_id}",
-                        title=f"Jira {issue_key} Comment: {comment_id}",
-                        obj_created=cdate,
-                        obj_modified=mdate,
-                        last_checked=datetime.now(),
-                        last_processed=None,
-                        error=False,
-                        error_message=None,
-                    )
-
-                # Create Sources for attachments
-                attachments = fields.get("attachment", [])
-                for attachment in attachments:
-                    filename = attachment["filename"]
-                    ext = "." + filename.split(".")[-1].lower()
-                    if ext not in supported_extensions:
-                        logger.info(
-                            f"Skipping unsupported attachment type: {filename} ({ext})"
-                        )
-                        continue
-
-                    cdate = attachment["created"]
-                    mdate = self.parse_date(attachment.get("updated", cdate))
-                    cdate = self.parse_date(cdate)
-                    yield Source(
-                        id=None,
-                        source_handler_id=handler.id,
-                        source_type_id=type_attachment.id,
-                        uri=attachment["self"],
-                        resolved_to=attachment["content"],
-                        title=f"Jira {issue_key} Attachment: {filename}",
-                        obj_created=cdate,
-                        obj_modified=mdate,
-                        last_checked=datetime.now(),
-                        last_processed=None,
-                        error=False,
-                        error_message=None,
-                    )
+                for attachment in fields.get("attachment", []):
+                    try:
+                        yield self._index_attachment(attachment, issue_key=issue_key)
+                    except ValueError as ve:
+                        logger.warning(f"Skipping attachment due to error: {ve}")
 
             idx += len(results)
+
+    def index_one(self, uri: str) -> Source:
+        data = self._jira_auth_req(uri).json()
+        if "/attachment/" in uri:
+            return self._index_attachment(data)
+        elif "/comment/" in uri:
+            return self._index_comment(uri, data)
+        elif "/issue/" in uri:
+            return self._index_issue(uri, data)
+
+        raise ValueError(f"Cannot identify jira source type from uri: {uri}")
+
+    def _index_attachment(self, data: dict, issue_key: str | None = None) -> Source:
+        filename = data.get("filename", "N/A")
+        ext = "." + filename.split(".")[-1].lower()
+        if ext not in supported_extensions:
+            raise ValueError(f"Unsupported attachment extension: {ext}")
+
+        type_attachment: SourceType = self.source_type_by_name("Attachment")
+        assert type_attachment
+        handler = self.get_handler()
+        assert handler
+
+        cdate = data["created"]
+        mdate = self.parse_date(data.get("updated", cdate))
+        cdate = self.parse_date(cdate)
+        key_insert = issue_key + " " if issue_key else ""
+        return Source(
+            id=None,
+            source_handler_id=handler.id,
+            source_type_id=type_attachment.id,
+            uri=data["self"],
+            resolved_to=data["content"],
+            title=f"Jira {key_insert}Attachment: {filename}",
+            obj_created=cdate,
+            obj_modified=mdate,
+            last_checked=datetime.now(),
+            last_processed=None,
+            error=False,
+            error_message=None,
+        )
+
+    def _index_comment(
+        self, uri: str, data: dict, issue_key: str | None = None
+    ) -> Source:
+        if issue_key is None:
+            issue_url = uri.split("/comment/")[0]
+            issue_data = self._jira_auth_req(issue_url).json()
+            issue_key = issue_data.get("key", None)
+
+        key_insert = issue_key + " " if issue_key else ""
+        ticket_url = f"{uri.split('/rest/api/')[0]}/browse/{issue_key}"
+
+        type_comment: SourceType = self.source_type_by_name("Comment")
+        assert type_comment
+        handler = self.get_handler()
+        assert handler
+
+        cdate = data["created"]
+        mdate = self.parse_date(data.get("updated", cdate))
+        cdate = self.parse_date(cdate)
+        return Source(
+            id=None,
+            source_handler_id=handler.id,
+            source_type_id=type_comment.id,
+            uri=data["self"],
+            resolved_to=ticket_url,
+            title=f"Jira {key_insert}Comment: {data['id']}",
+            obj_created=cdate,
+            obj_modified=mdate,
+            last_checked=datetime.now(),
+            last_processed=None,
+            error=False,
+            error_message=None,
+        )
+
+    def _index_issue(self, uri: str, data: dict) -> Source:
+        type_issue: SourceType = self.source_type_by_name("Issue")
+        assert type_issue
+        handler = self.get_handler()
+        assert handler
+
+        issue_key = data["key"]
+        ticket_url = f"{uri.split('/rest/api/')[0]}/browse/{issue_key}"
+        fields = data["fields"]
+        cdate = fields["created"]
+        mdate = self.parse_date(fields.get("updated", cdate))
+        cdate = self.parse_date(cdate)
+        return Source(
+            id=None,
+            source_handler_id=handler.id,
+            source_type_id=type_issue.id,
+            uri=data["self"],
+            resolved_to=ticket_url,
+            title=f"Jira {issue_key}: {fields['summary']}",
+            obj_created=cdate,
+            obj_modified=mdate,
+            last_checked=datetime.now(),
+            last_processed=None,
+            error=False,
+            error_message=None,
+        )
 
     def _read_source(self, source: Source) -> str:
         if source.source_type_id == self.source_type_by_name("Issue").id:

@@ -18,7 +18,7 @@ class Resolver:
 
     def register(self, handler: BaseSourceHandler) -> None:
         handler_model = self._handler_repo.get_or_create(handler.handler_name)
-        handler.set_handler_model(handler_model)
+        handler.set_handler(handler_model)
         logger.info(f"Registered handler: {handler.handler_name} (id={handler_model.id})")
 
         for type_name in handler.source_types.keys():

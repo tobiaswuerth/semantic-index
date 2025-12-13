@@ -12,19 +12,24 @@ Create a searchable semantic index to find documents and sites.
 # Usage
 
 ```
-usage: index.py [-h] [--ingest HANDLER SOURCE] [--process] [--search QUERY] [--kcount KCOUNT]
+usage: index.py [-h] [-i HANDLER SOURCE] [-ii HANDLER SOURCE] [-p] [-pp SOURCE_ID] [-s QUERY] [-kc KCOUNT]
 
 Semantic Index Manager
 
 options:
   -h, --help            show this help message and exit
-  --ingest HANDLER SOURCE, -i HANDLER SOURCE
-                        Ingest sources using the specified handler and source (e.g., -i file
-                        /path/to/folder, -i jira https://my.url/api)
-  --process, -p         Process all sources
-  --search QUERY, -s QUERY
+  -i HANDLER SOURCE, --ingest HANDLER SOURCE
+                        Ingest sources using the specified handler and source (e.g., -i File /path/to/folder,    
+                        -i Jira https://my.url/api)
+  -ii HANDLER SOURCE, --ingest-one HANDLER SOURCE
+                        Ingest a single source using the specified handler and source (e.g., -ii File
+                        /path/to/file.txt, -ii Jira https://jira.company.ch/rest/api/2/issue/12345)
+  -p, --process         Process all sources
+  -pp SOURCE_ID, --process-one SOURCE_ID
+                        Process a single source by its ID
+  -s QUERY, --search QUERY
                         Find k-nearest neighbors for the query
-  --kcount KCOUNT, -kc KCOUNT
+  -kc KCOUNT, --kcount KCOUNT
                         Number of results to return for KNN search (default: 5)
 ```
 
@@ -32,7 +37,7 @@ options:
 Either individual commands, like
 ```
 py .\index.py --ingest file "D:\my_data"
-py .\index.py --ingest jira "https://jira.company.ch" -a key=MY_API_KEY
+py .\index.py --ingest jira "https://jira.company.ch"
 py .\index.py --process
 py .\index.py --knn "test" --kcount 5
 ```
