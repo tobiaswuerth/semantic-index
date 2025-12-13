@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Iterator, Optional, TYPE_CHECKING, Sequence
+from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -12,14 +13,15 @@ from sqlalchemy import (
     func,
     extract,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
+
 from ..api import HistogramResponse
 from .database import Base, get_session, SessionFactory
-from .embedding import Embedding
 
 if TYPE_CHECKING:
     from .source_handler import SourceHandler
     from .source_type import SourceType
+    from .embedding import Embedding
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,15 +65,12 @@ class SourceRepository:
     def __init__(self, session_factory: SessionFactory = get_session):
         self._session_factory = session_factory
 
-    def get_all(self, order_by_modified: bool = True) -> list[Source]:
+    def get_all(self) -> Sequence[Source]:
         with self._session_factory() as session:
-            stmt = select(Source)
-            if order_by_modified:
-                stmt = stmt.order_by(Source.obj_modified.desc())
-            sources = list(session.execute(stmt).scalars().all())
-            for source in sources:
-                session.expunge(source)
-            return sources
+            stmt = select(Source).order_by(Source.obj_modified.desc())
+            result = session.execute(stmt).scalars().all()
+            session.expunge_all()
+        return result
 
     def get_by_id(self, source_id: int) -> Source | None:
         with self._session_factory() as session:
@@ -82,20 +81,30 @@ class SourceRepository:
                 )
                 .where(Source.id == source_id)
             )
-            source = session.execute(stmt).scalars().first()
-            if source:
-                session.expunge(source.source_type)
-                session.expunge(source)
-            return source
+            result = session.execute(stmt).scalar_one_or_none()
+            session.expunge_all()
+        return result
+
+    def get_by_embedding_id(self, embedding_id: int) -> Source | None:
+        with self._session_factory() as session:
+            from .embedding import Embedding  # Avoid circular import
+
+            stmt = (
+                select(Source)
+                .join(Embedding, Embedding.source_id == Source.id)
+                .where(Embedding.id == embedding_id)
+            )
+            result = session.execute(stmt).scalar_one_or_none()
+            session.expunge_all()
+        return result
 
     def upsert_many(self, sources: Iterator[Source]) -> tuple[int, int]:
         updated, inserted = 0, 0
         with self._session_factory() as session:
             try:
                 for count, source in enumerate(sources, start=1):
-                    existing = session.execute(
-                        select(Source).where(Source.uri == source.uri)
-                    ).scalar_one_or_none()
+                    stmt = select(Source).where(Source.uri == source.uri)
+                    existing = session.execute(stmt).scalar_one_or_none()
                     if existing:
                         existing.obj_created = source.obj_created
                         existing.obj_modified = source.obj_modified
@@ -107,7 +116,6 @@ class SourceRepository:
                         inserted += 1
                     if count % 1000 == 0:
                         session.flush()
-                        session.commit()
                         logger.debug(f"Upserted {count} sources...")
             except KeyboardInterrupt:
                 logger.warning("Upsert operation interrupted by user.")
@@ -115,12 +123,15 @@ class SourceRepository:
 
     def update(self, source: Source) -> None:
         with self._session_factory() as session:
-            db_source = session.get(Source, source.id)
-            if db_source:
-                db_source.last_checked = source.last_checked
-                db_source.last_processed = source.last_processed
-                db_source.error = source.error
-                db_source.error_message = source.error_message
+            stmt = select(Source).where(Source.id == source.id)
+            db_source = session.execute(stmt).scalar_one_or_none()
+            if not db_source:
+                return None
+
+            db_source.last_checked = source.last_checked
+            db_source.last_processed = source.last_processed
+            db_source.error = source.error
+            db_source.error_message = source.error_message
 
     def get_createdate_histogram(self) -> list[HistogramResponse]:
         return self._get_date_histogram(Source.obj_created)
@@ -129,12 +140,14 @@ class SourceRepository:
         return self._get_date_histogram(Source.obj_modified)
 
     def _get_date_histogram(self, field: Mapped[datetime]) -> list[HistogramResponse]:
+        from .embedding import Embedding  # avoid circular import
+
         with self._session_factory() as session:
             # get global min date
             min_date_row = session.execute(select(func.min(field))).first()
-            min_date = min_date_row[0] if min_date_row else None
-            if not min_date:
+            if not min_date_row or len(min_date_row) == 0 or min_date_row[0] is None:
                 return []
+            min_date = min_date_row[0]
 
             # count distinct processed sources per year-month
             year_col = extract("year", field).label("year")
@@ -147,7 +160,6 @@ class SourceRepository:
                 .order_by(year_col.asc(), month_col.asc())
             )
             results = session.execute(stmt).all()
-            session.expunge_all()
 
         # reconstruct into full histogram with filled gaps
         db_counts = {

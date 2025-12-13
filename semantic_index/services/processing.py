@@ -33,7 +33,7 @@ class ProcessingService:
 
     def process_pending_sources(self) -> None:
         logger.info("Processing sources...")
-        sources = self._source_repo.get_all(order_by_modified=True)
+        sources = self._source_repo.get_all()
         if not sources:
             logger.info("No sources to process")
             return

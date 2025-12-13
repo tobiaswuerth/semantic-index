@@ -51,19 +51,19 @@ class EmbeddingRepository:
     def __init__(self, session_factory: SessionFactory = get_session):
         self._session_factory = session_factory
 
-    def get_all(self) -> list[Embedding]:
+    def get_all(self) -> Sequence[Embedding]:
         with self._session_factory() as session:
-            embeddings = list(session.execute(select(Embedding)).scalars().all())
-            for emb in embeddings:
-                session.expunge(emb)
-            return embeddings
+            stmt = select(Embedding)
+            result = session.execute(stmt).scalars().all()
+            session.expunge_all()
+        return result
 
     def get_by_id(self, embedding_id: int) -> Embedding | None:
         with self._session_factory() as session:
-            embedding = session.get(Embedding, embedding_id)
-            if embedding:
-                session.expunge(embedding)
-            return embedding
+            stmt = select(Embedding).where(Embedding.id == embedding_id)
+            result = session.execute(stmt).scalar_one_or_none()
+            session.expunge_all()
+        return result
 
     def create_many(self, embeddings: Sequence[Embedding]) -> None:
         with self._session_factory() as session:
@@ -71,37 +71,32 @@ class EmbeddingRepository:
 
     def delete_by_source_id(self, source_id: int) -> int:
         with self._session_factory() as session:
-            result = cast(
-                CursorResult,
-                session.execute(
-                    delete(Embedding).where(Embedding.source_id == source_id)
-                ),
-            )
-            return result.rowcount if result.rowcount else 0
+            stmt = delete(Embedding).where(Embedding.source_id == source_id)
+            result = cast(CursorResult, session.execute(stmt))
+        return result.rowcount if result.rowcount else 0
 
     def get_all_with_date_and_type(
         self,
         filter: SearchDateFilter,
         source_type_ids: list[int] | None,
-    ) -> list[Embedding]:
+    ) -> Sequence[Embedding]:
         from .source import Source  # Avoid circular import
         from .source_type import SourceType  # Avoid circular import
 
         with self._session_factory() as session:
-            query = select(Embedding).join(Embedding.source).join(Source.source_type)
-            
-            if source_type_ids is not None:
-                query = query.where(SourceType.id.in_(source_type_ids))
-            if filter.createdate_start:
-                query = query.where(Source.obj_created >= filter.createdate_start)
-            if filter.createdate_end:
-                query = query.where(Source.obj_created <= filter.createdate_end)
-            if filter.modifieddate_start:
-                query = query.where(Source.obj_modified >= filter.modifieddate_start)
-            if filter.modifieddate_end:
-                query = query.where(Source.obj_modified <= filter.modifieddate_end)
+            stmt = select(Embedding).join(Embedding.source).join(Source.source_type)
 
-            embeddings = list(session.execute(query).scalars().all())
-            for emb in embeddings:
-                session.expunge(emb)
+            if source_type_ids is not None:
+                stmt = stmt.where(SourceType.id.in_(source_type_ids))
+            if filter.createdate_start:
+                stmt = stmt.where(Source.obj_created >= filter.createdate_start)
+            if filter.createdate_end:
+                stmt = stmt.where(Source.obj_created <= filter.createdate_end)
+            if filter.modifieddate_start:
+                stmt = stmt.where(Source.obj_modified >= filter.modifieddate_start)
+            if filter.modifieddate_end:
+                stmt = stmt.where(Source.obj_modified <= filter.modifieddate_end)
+
+            embeddings = session.execute(stmt).scalars().all()
+            session.expunge_all()
             return embeddings

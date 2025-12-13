@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 from sqlalchemy import Integer, String, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,33 +27,29 @@ class SourceHandlerRepository:
     def __init__(self, session_factory: SessionFactory = get_session):
         self._session_factory = session_factory
 
-    def get_all(self) -> list[SourceHandler]:
+    def get_all(self) -> Sequence[SourceHandler]:
         with self._session_factory() as session:
-            handlers = list(session.execute(select(SourceHandler)).scalars().all())
-            for handler in handlers:
-                session.expunge(handler)
-            return handlers
+            stmt = select(SourceHandler).order_by(SourceHandler.name)
+            result = session.execute(stmt).scalars().all()
+            session.expunge_all()
+        return result
 
     def get_by_name(self, name: str) -> SourceHandler | None:
         with self._session_factory() as session:
-            handler = session.execute(
-                select(SourceHandler).where(SourceHandler.name == name)
-            ).scalar_one_or_none()
-            if handler:
-                session.expunge(handler)
-            return handler
+            stmt = select(SourceHandler).where(SourceHandler.name == name)
+            result = session.execute(stmt).scalar_one_or_none()
+            session.expunge_all()
+        return result
 
     def get_or_create(self, name: str) -> SourceHandler:
         with self._session_factory() as session:
-            handler = session.execute(
-                select(SourceHandler).where(SourceHandler.name == name)
-            ).scalar_one_or_none()
-            if handler:
-                session.expunge(handler)
-                return handler
+            stmt = select(SourceHandler).where(SourceHandler.name == name)
+            result = session.execute(stmt).scalar_one_or_none()
 
-            handler = SourceHandler(name=name)
-            session.add(handler)
-            session.flush()
-            session.expunge(handler)
-            return handler
+            if not result:
+                result = SourceHandler(name=name)
+                session.add(result)
+                session.flush()
+
+            session.expunge_all()
+        return result
