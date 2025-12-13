@@ -2,6 +2,7 @@ import logging
 from contextlib import AbstractContextManager, contextmanager
 from typing import Callable, Generator
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from ..config import config
@@ -17,12 +18,26 @@ _SessionLocal: sessionmaker[Session] | None = None
 
 def get_engine() -> Engine:
     global _engine
-    if _engine is None:
-        _engine = create_engine(
-            config.database.url,
-            echo=config.database.echo,
-            pool_pre_ping=True,
-        )
+    if _engine:
+        return _engine
+
+    url = config.database.url
+    args = {
+        "url": url,
+        "echo": config.database.echo,
+        "pool_pre_ping": True,
+    }
+
+    # Special handling for SQLite: allow connections from multiple threads
+    if url.startswith("sqlite"):
+        # File-based SQLite: disable check_same_thread so connections can
+        # be used in different threads (FastAPI offloads blocking work).
+        args["connect_args"] = {"check_same_thread": False}
+        if ":memory:" in url:
+            # In-memory SQLite needs StaticPool to be shared across threads.
+            args["poolclass"] = StaticPool
+
+    _engine = create_engine(**args)
     return _engine
 
 
