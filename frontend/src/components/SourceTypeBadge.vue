@@ -18,6 +18,18 @@ const props = defineProps<Props>()
     margin: 0 0.5rem;
 }
 
+.source-type[data-value="Text"] {
+    background-color: #9b9b9b;
+}
+
+.source-type[data-value="Data"] {
+    background-color: #62ac2c;
+}
+
+.source-type[data-value="System"] {
+    background-color: #6c6c6c;
+}
+
 .source-type[data-value="PDF"] {
     background-color: #F44336;
 }
@@ -26,20 +38,8 @@ const props = defineProps<Props>()
     background-color: #3F51B5;
 }
 
-.source-type[data-value="CSV"] {
-    background-color: #45a445;
-}
-
-.source-type[data-value="Markdown"] {
-    background-color: #af934c;
-}
-
-.source-type[data-value="TXT"] {
-    background-color: #787878;
-}
-
 .source-type[data-value="Mail"] {
-    background-color: #83408f;
+    background-color: #ae63bb;
 }
 
 .source-type[data-value="Issue"] {

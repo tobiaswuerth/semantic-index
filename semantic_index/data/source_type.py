@@ -41,16 +41,18 @@ class SourceTypeRepository:
 
     def get_all_counted(self) -> list[SourceTypeCount]:
         from .source import Source  # avoid circular import
+        from .source_handler import SourceHandler  # avoid circular import
         from .embedding import Embedding  # avoid circular import
 
         with self._session_factory() as session:
             stmt = (
                 select(SourceType, func.count(func.distinct(Embedding.source_id)))
                 .select_from(SourceType)
+                .outerjoin(SourceHandler, SourceType.source_handler_id == SourceHandler.id)
                 .outerjoin(Source, Source.source_type_id == SourceType.id)
                 .outerjoin(Embedding, Embedding.source_id == Source.id)
                 .group_by(SourceType.id)
-                .order_by(SourceType.name)
+                .order_by(SourceHandler.name, SourceType.name)
             )
             results = session.execute(stmt).all()
             session.expunge_all()

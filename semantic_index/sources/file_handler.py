@@ -13,15 +13,12 @@ logger = logging.getLogger(__name__)
 class FileSourceHandler(BaseSourceHandler):
     handler_name = "File"
     source_types = {
-        "TXT": [".txt"],
-        "Markdown": [".md"],
-        "CSV": [".csv"],
+        "Text": [".txt", ".md"],
+        "Data": [".csv", ".sql", ".json", ".xml"],
+        "System": [".yaml", ".ini", ".log"],
         "Word": [".docx"],
         "PDF": [".pdf"],
         "Mail": [".msg"],
-        "SQL": [".sql"],
-        "XML": [".xml"],
-        "Log": [".log"],
     }
 
     def __init__(self):
