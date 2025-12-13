@@ -101,4 +101,11 @@ async def get_modifydate_histogram(
 async def get_source_types(
     manager: Manager = Depends(get_manager),
 ) -> List[SourceTypeCount]:
-    return await run_in_threadpool(manager.repo_source_type.get_all_counted)
+    data = await run_in_threadpool(manager.repo_source_type.get_all_counted)
+
+    for item in data:
+        handler = manager.resolver.get_handler_by_id(item.source_type.source_handler_id)
+        assert handler
+        item.source_type.contains = handler.source_types[item.source_type.name]
+
+    return data

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { SourceType } from "@/dto/sourceType";
 
 interface Props {
@@ -7,10 +8,17 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const tooltip = computed(() => {
+    return props.sourceType.contains && props.sourceType.contains.length > 0
+        ? props.sourceType.contains.join(", ")
+        : '';
+});
+
 </script>
 
 <template>
-    <Badge :value="props.sourceType.name" size="small" class="source-type" :data-value="props.sourceType.name"></Badge>
+    <Badge :value="props.sourceType.name" size="small" class="source-type" :data-value="props.sourceType.name"
+        v-tooltip="tooltip"></Badge>
 </template>
 
 <style scoped>

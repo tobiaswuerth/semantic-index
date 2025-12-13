@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from typing import Optional, List
 
 
 class SourceTypeSchema(BaseModel):
@@ -7,3 +8,4 @@ class SourceTypeSchema(BaseModel):
     id: int
     name: str
     source_handler_id: int
+    contains: Optional[List[str]] = None
