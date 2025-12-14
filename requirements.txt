@@ -12,3 +12,9 @@ extract_msg
 sqlalchemy
 alembic
 charset_normalizer
+pandas
+xlrd
+openpyxl
+odfpy
+pyxlsb
+pywin32

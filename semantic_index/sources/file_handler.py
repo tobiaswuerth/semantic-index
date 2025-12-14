@@ -14,11 +14,22 @@ class FileSourceHandler(BaseSourceHandler):
     handler_name = "File"
     source_types = {
         "Text": [".txt", ".md"],
-        "Data": [".csv", ".sql", ".json", ".xml"],
-        "System": [".yaml", ".ini", ".log"],
-        "Word": [".docx"],
         "PDF": [".pdf"],
         "Mail": [".msg"],
+        "Word": [".odt", ".doc", ".dot", ".wbk", ".docx", ".docm", ".dotx", ".dotm"],
+        "Spreadsheet": [
+            ".ods",
+            ".csv",
+            ".tsv",
+            ".xls",
+            ".xlt",
+            ".xla",
+            ".xlsx",
+            ".xlsm",
+            ".xltx",
+            ".xltm",
+            ".xlsb",
+        ],
     }
 
     def __init__(self):
