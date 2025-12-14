@@ -2,26 +2,30 @@ import logging
 from typing import Iterator
 import requests
 from datetime import datetime
-from tqdm import tqdm
+from enum import Enum
 
-from ..data import Source, SourceType
+from ..data import Source
 from ..config import config
 from .base_handler import BaseSourceHandler
-from .io import supported_extensions, extension_to_reader, TempDirectory
+from .io import (
+    get_file_extension,
+    supported_extensions,
+    extension_to_reader,
+    TempDirectory,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class JiraSourceHandler(BaseSourceHandler):
-    handler_name = "Jira"
-    source_types = {
-        "Issue": ["issue"],
-        "Comment": ["comment"],
-        "Attachment": ["attachment"],
-    }
+class JiraType(Enum):
+    ISSUE = 0
+    COMMENT = 1
+    ATTACHMENT = 2
 
-    def __init__(self):
-        super().__init__()
+
+class JiraSourceHandler(BaseSourceHandler):
+    def get_name(self) -> str:
+        return "Jira"
 
     def _jira_auth_req(self, url: str, params: dict = {}) -> requests.Response:
         headers = {
@@ -41,10 +45,6 @@ class JiraSourceHandler(BaseSourceHandler):
         }
         search_url = f"{base_url}/rest/api/2/search"
         return self._jira_auth_req(search_url, params=query).json()
-
-    def parse_date(self, date_str: str):
-        # e.g. "created": "2018-11-14T10:23:58.137+0100",
-        return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
 
     def index_all(self, base: str) -> Iterator[Source]:
         idx = 0
@@ -68,36 +68,52 @@ class JiraSourceHandler(BaseSourceHandler):
 
             idx += len(results)
 
+    def get_type_enum(self, uri: str) -> JiraType:
+        if "/attachment/" in uri:
+            return JiraType.ATTACHMENT
+        elif "/comment/" in uri:
+            return JiraType.COMMENT
+        elif "/issue/" in uri:
+            return JiraType.ISSUE
+
+        raise ValueError(f"Cannot identify jira source type from uri: {uri}")
+
     def index_one(self, uri: str) -> Source:
         data = self._jira_auth_req(uri).json()
-        if "/attachment/" in uri:
+        type_ = self.get_type_enum(uri)
+        if type_ == JiraType.ATTACHMENT:
             return self._index_attachment(data)
-        elif "/comment/" in uri:
+        elif type_ == JiraType.COMMENT:
             return self._index_comment(uri, data)
-        elif "/issue/" in uri:
+        elif type_ == JiraType.ISSUE:
             return self._index_issue(uri, data)
 
         raise ValueError(f"Cannot identify jira source type from uri: {uri}")
 
-    def _index_attachment(self, data: dict, issue_key: str | None = None) -> Source:
-        filename = data.get("filename", "N/A")
-        ext = "." + filename.split(".")[-1].lower()
-        if ext not in supported_extensions:
-            raise ValueError(f"Unsupported attachment extension: {ext}")
-
-        type_attachment: SourceType = self.source_type_by_name("Attachment")
-        assert type_attachment
-        handler = self.get_handler()
-        assert handler
+    def get_create_modify_dates(self, data: dict) -> tuple[datetime, datetime]:
+        def _parse_date(date_str: str):
+            # e.g. "created": "2018-11-14T10:23:58.137+0100",
+            return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
 
         cdate = data["created"]
-        mdate = self.parse_date(data.get("updated", cdate))
-        cdate = self.parse_date(cdate)
+        mdate = _parse_date(data.get("updated", cdate))
+        cdate = _parse_date(cdate)
+        assert cdate <= mdate
+        return cdate, mdate
+
+    def _index_attachment(self, data: dict, issue_key: str | None = None) -> Source:
+        filename = data["filename"]
+        ext = get_file_extension(filename)
+        tags = [
+            self.handler_tag,
+            self.repo_tag.get_or_create("Attachment"),
+            self.repo_tag.get_or_create(ext),
+        ]
+        cdate, mdate = self.get_create_modify_dates(data)
         key_insert = issue_key + " " if issue_key else ""
         return Source(
             id=None,
-            source_handler_id=handler.id,
-            source_type_id=type_attachment.id,
+            source_handler_id=self.handler.id,
             uri=data["self"],
             resolved_to=data["content"],
             title=f"Jira {key_insert}Attachment: {filename}",
@@ -107,6 +123,7 @@ class JiraSourceHandler(BaseSourceHandler):
             last_processed=None,
             error=False,
             error_message=None,
+            tags=tags,
         )
 
     def _index_comment(
@@ -119,19 +136,11 @@ class JiraSourceHandler(BaseSourceHandler):
 
         key_insert = issue_key + " " if issue_key else ""
         ticket_url = f"{uri.split('/rest/api/')[0]}/browse/{issue_key}"
-
-        type_comment: SourceType = self.source_type_by_name("Comment")
-        assert type_comment
-        handler = self.get_handler()
-        assert handler
-
-        cdate = data["created"]
-        mdate = self.parse_date(data.get("updated", cdate))
-        cdate = self.parse_date(cdate)
+        tags = [self.handler_tag, self.repo_tag.get_or_create("Comment")]
+        cdate, mdate = self.get_create_modify_dates(data)
         return Source(
             id=None,
-            source_handler_id=handler.id,
-            source_type_id=type_comment.id,
+            source_handler_id=self.handler.id,
             uri=data["self"],
             resolved_to=ticket_url,
             title=f"Jira {key_insert}Comment: {data['id']}",
@@ -141,24 +150,18 @@ class JiraSourceHandler(BaseSourceHandler):
             last_processed=None,
             error=False,
             error_message=None,
+            tags=tags,
         )
 
     def _index_issue(self, uri: str, data: dict) -> Source:
-        type_issue: SourceType = self.source_type_by_name("Issue")
-        assert type_issue
-        handler = self.get_handler()
-        assert handler
-
         issue_key = data["key"]
         ticket_url = f"{uri.split('/rest/api/')[0]}/browse/{issue_key}"
         fields = data["fields"]
-        cdate = fields["created"]
-        mdate = self.parse_date(fields.get("updated", cdate))
-        cdate = self.parse_date(cdate)
+        tags = [self.handler_tag, self.repo_tag.get_or_create("Issue")]
+        cdate, mdate = self.get_create_modify_dates(fields)
         return Source(
             id=None,
-            source_handler_id=handler.id,
-            source_type_id=type_issue.id,
+            source_handler_id=self.handler.id,
             uri=data["self"],
             resolved_to=ticket_url,
             title=f"Jira {issue_key}: {fields['summary']}",
@@ -168,17 +171,19 @@ class JiraSourceHandler(BaseSourceHandler):
             last_processed=None,
             error=False,
             error_message=None,
+            tags=tags,
         )
 
     def _read_source(self, source: Source) -> str:
-        if source.source_type_id == self.source_type_by_name("Issue").id:
+        type_ = self.get_type_enum(source.uri)
+        if type_ == JiraType.ISSUE:
             return self._read_issue(source)
-        elif source.source_type_id == self.source_type_by_name("Comment").id:
+        elif type_ == JiraType.COMMENT:
             return self._read_comment(source)
-        elif source.source_type_id == self.source_type_by_name("Attachment").id:
+        elif type_ == JiraType.ATTACHMENT:
             return self._read_attachment(source)
 
-        raise NotImplementedError(f"Unknown type: {source.source_type_id}")
+        raise NotImplementedError(f"Unknown type: {source.uri}")
 
     def _read_issue(self, source: Source) -> str:
         data = self._jira_auth_req(source.uri).json()
@@ -283,7 +288,7 @@ class JiraSourceHandler(BaseSourceHandler):
         metadata = self._jira_auth_req(source.uri).json()
 
         filename = metadata.get("filename", "N/A")
-        ext = "." + filename.split(".")[-1].lower()
+        ext = get_file_extension(filename)
         if ext not in supported_extensions:
             raise ValueError(f"Unsupported attachment extension: {ext}")
 

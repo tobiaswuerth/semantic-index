@@ -62,7 +62,7 @@ def handle_ingest(manager: Manager, args: argparse.Namespace):
     # check handler
     handler_name, source_path = args.ingest
     logging.info(f"Ingesting {source_path} using handler '{handler_name}'")
-    handler = manager.resolver.get_handler_by_name(handler_name)
+    handler = manager.handler.find_by_name(handler_name)
     if handler is None:
         logging.error(f"Handler '{handler_name}' not registered")
         sys.exit(1)
@@ -82,7 +82,7 @@ def handle_ingest_one(manager: Manager, args: argparse.Namespace):
     logging.info(
         f"Ingesting individual source {source_path} using handler '{handler_name}'"
     )
-    handler = manager.resolver.get_handler_by_name(handler_name)
+    handler = manager.handler.find_by_name(handler_name)
     if handler is None:
         logging.error(f"Handler '{handler_name}' not registered")
         sys.exit(1)

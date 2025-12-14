@@ -2,18 +2,18 @@
 import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { DateRange } from '@/composables/useFilter';
-import type { SourceTypeCount } from '@/dto/sourceTypeCount';
+import type { TagCount } from '@/dto/tagCount';
 import HistDateRangeSelector from './HistDateRangeSelector.vue'
 import { useFilter } from '@/composables/useFilter';
-import SourceTypeBadge from './SourceTypeBadge.vue';
+import TagBadge from './TagBadge.vue';
 
 const {
     getCreateDateHistData,
     filterCreateDateRange,
     getModifyDateHistData,
     filterModifyDateRange,
-    getSourceTypesData,
-    filterSourceTypes,
+    getTagData,
+    filterTags,
     showDrawer,
 } = useFilter();
 
@@ -49,22 +49,22 @@ const cancel = () => {
     filterModifyDateRangeTmp.value = ensureDateRange(filterModifyDateRange.value);
 };
 
-const sourceTypeData = ref<SourceTypeCount[] | null>(null);
-const sourceTypeLoading = ref<boolean>(false);
+const tagData = ref<TagCount[] | null>(null);
+const tagDataLoading = ref<boolean>(false);
 
-const loadSourceTypes = async () => {
-    sourceTypeLoading.value = true;
-    sourceTypeData.value = await getSourceTypesData();
-    sourceTypeLoading.value = false;
+const loadTags = async () => {
+    tagDataLoading.value = true;
+    tagData.value = await getTagData();
+    tagDataLoading.value = false;
 };
 const reset = () => {
-    filterSourceTypes.value = sourceTypeData.value?.map(stype => stype.source_type.id) || [];
+    filterTags.value = tagData.value?.map(stype => stype.tag.id) || [];
 };
 
 watch(showDrawer, (newVal) => {
     if (newVal) {
-        if (!sourceTypeLoading.value && sourceTypeData.value === null) {
-            loadSourceTypes();
+        if (!tagDataLoading.value && tagData.value === null) {
+            loadTags();
         }
     }
 });
@@ -93,7 +93,7 @@ watch(showDrawer, (newVal) => {
                     <Button variant="text" icon="pi pi-refresh" size="small" @click="reset"
                         v-tooltip.top="'Reset Filter'" />
                 </div>
-                <div v-if="sourceTypeLoading">
+                <div v-if="tagDataLoading">
                     <div v-for="value in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="value">
                         <div class="placeholder">
                             <Skeleton width="1.4rem" height="1.35rem"></Skeleton>
@@ -103,11 +103,10 @@ watch(showDrawer, (newVal) => {
                     </div>
                 </div>
                 <div v-else>
-                    <div v-for="stype in sourceTypeData" :key="stype.source_type.id" class="p-field-checkbox">
-                        <Checkbox :inputId="`stype-${stype.source_type.id}`" :value="stype.source_type.id"
-                            v-model="filterSourceTypes" />
-                        <label :for="`stype-${stype.source_type.id}`">
-                            <SourceTypeBadge :sourceType="stype.source_type" />
+                    <div v-for="stype in tagData" :key="stype.tag.id" class="p-field-checkbox">
+                        <Checkbox :inputId="`stype-${stype.tag.id}`" :value="stype.tag.id" v-model="filterTags" />
+                        <label :for="`stype-${stype.tag.id}`">
+                            <TagBadge :tag="stype.tag" />
                             <small>({{ stype.count }} Sources )</small>
                         </label>
 

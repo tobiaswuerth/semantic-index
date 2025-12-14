@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://localhost:5000/api';
 import type { SearchRequest } from "@/dto/searchRequest";
 import type { SearchResult } from "@/dto/searchResult";
 import type { ContentResponse } from "../dto/contentResponse";
-import type { SourceTypeCount } from "@/dto/sourceTypeCount";
+import type { TagCount } from "@/dto/tagCount";
 import type { HistogramResponse, HistogramResponseString } from "@/dto/histogramResponse";
 
 import { useFilter } from "@/composables/useFilter";
@@ -21,7 +21,7 @@ async function _search(target_url: string, query: string, limit: number = 10): P
             modifieddate_start: filterState.filterModifyDateRange?.startDate ?? null,
             modifieddate_end: filterState.filterModifyDateRange?.endDate ?? null,
         },
-        source_type_ids: filterState.filterSourceTypes == null ? null : [...filterState.filterSourceTypes],
+        tag_ids: filterState.filterTags == null ? null : [...filterState.filterTags],
     };
     console.log('Search request body:', body);
 
@@ -129,18 +129,18 @@ export async function getCreateDateHistogram(): Promise<HistogramResponse[]> {
     return _getDateHistogram('source/histogram/createdate');
 }
 
-export async function getSourceTypeCounts(): Promise<SourceTypeCount[]> {
-    console.log('Fetching source types');
-    return fetch(`${API_BASE_URL}/source_type`)
+export async function getTagCounts(): Promise<TagCount[]> {
+    console.log('Fetching tags from API');
+    return fetch(`${API_BASE_URL}/tags`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Failed to fetch source types with status: ${response.status}`);
+                throw new Error(`Failed to fetch tags with status: ${response.status}`);
             }
-            console.log('Source types fetched successfully');
+            console.log('Tags fetched successfully');
             return response.json();
         })
         .catch(error => {
-            console.error('Error fetching source types:', error);
+            console.error('Error fetching tags:', error);
             throw error;
         });
 }

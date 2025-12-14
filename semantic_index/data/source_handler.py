@@ -6,7 +6,6 @@ from .database import Base, get_session, SessionFactory
 
 if TYPE_CHECKING:
     from .source import Source
-    from .source_type import SourceType
 
 
 class SourceHandler(Base):
@@ -15,9 +14,6 @@ class SourceHandler(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
 
-    source_types: Mapped[list["SourceType"]] = relationship(
-        "SourceType", back_populates="source_handler"
-    )
     sources: Mapped[list["Source"]] = relationship(
         "Source", back_populates="source_handler"
     )

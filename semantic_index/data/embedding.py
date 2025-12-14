@@ -78,16 +78,27 @@ class EmbeddingRepository:
     def get_all_with_date_and_type(
         self,
         filter: SearchDateFilter,
-        source_type_ids: list[int] | None,
+        tag_ids: list[int] | None,
     ) -> Sequence[Embedding]:
         from .source import Source  # Avoid circular import
-        from .source_type import SourceType  # Avoid circular import
+        from .source_tag import SourceTag  # Avoid circular import
 
         with self._session_factory() as session:
-            stmt = select(Embedding).join(Embedding.source).join(Source.source_type)
+            stmt = select(Embedding)
 
-            if source_type_ids is not None:
-                stmt = stmt.where(SourceType.id.in_(source_type_ids))
+            if (
+                filter.createdate_start
+                or filter.createdate_end
+                or filter.modifieddate_start
+                or filter.modifieddate_end
+                or tag_ids is not None
+            ):
+                stmt = stmt.join(Source, Embedding.source_id == Source.id)
+
+            if tag_ids is not None:
+                stmt = stmt.join(SourceTag, Source.id == SourceTag.c.source_id)
+                stmt = stmt.where(SourceTag.c.tag_id.in_(tag_ids))
+
             if filter.createdate_start:
                 stmt = stmt.where(Source.obj_created >= filter.createdate_start)
             if filter.createdate_end:

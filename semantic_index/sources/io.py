@@ -19,6 +19,10 @@ from .external import run_subprocess_with_timeout
 logger = logging.getLogger(__name__)
 
 
+def get_file_extension(path: str) -> str:
+    return os.path.splitext(path)[1].lower()
+
+
 def _read_plaintext(path: str) -> str:
     with open(path, "rb") as f:
         raw_data = f.read()
@@ -109,7 +113,7 @@ def _read_pdf(path: str) -> str:
 
 
 def _read_msg(path: str) -> str:
-    with extract_msg.Message(path) as mail:
+    with extract_msg.Message(path) as mail: # type: ignore
         mail: Message = mail
         result = f"{mail.sender} -> {mail.to}\n{mail.date}: {mail.subject}\n{mail.body}"
     return result

@@ -25,7 +25,7 @@ class SearchService:
         self, request: SearchRequest
     ) -> tuple[Sequence[Embedding], np.ndarray, np.ndarray]:
         embeddings = self._embedding_repo.get_all_with_date_and_type(
-            request.date_filter, request.source_type_ids
+            request.date_filter, request.tag_ids
         )
         if not embeddings:
             return [], np.array([]), np.array([])

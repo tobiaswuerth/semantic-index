@@ -1,6 +1,6 @@
 import { reactive, readonly, toRef, computed } from 'vue'
-import { getCreateDateHistogram, getModifyDateHistogram, getSourceTypeCounts } from '@/composables/useAPI'
-import type { SourceTypeCount } from '@/dto/sourceTypeCount'
+import { getCreateDateHistogram, getModifyDateHistogram, getTagCounts } from '@/composables/useAPI'
+import type { TagCount } from '@/dto/tagCount'
 import type { HistogramResponse } from '@/dto/histogramResponse'
 
 export interface DateRange {
@@ -17,8 +17,8 @@ const state = reactive({
   modifyDateHistData: null as HistogramResponse[] | null,
   filterModifyDateRange: null as DateRange | null,
 
-  sourceTypesData: null as SourceTypeCount[] | null,
-  filterSourceTypes: null as number[] | null,
+  tagData: null as TagCount[] | null,
+  filterTags: null as number[] | null,
 
   showDrawer: false,
 })
@@ -31,8 +31,8 @@ const totalFiltersActive = computed(() => {
   if (state.filterModifyDateRange && (state.filterModifyDateRange.startPercent > 0 || state.filterModifyDateRange.endPercent < 100)) {
     count += 1
   }
-  if (state.sourceTypesData) {
-    count += state.sourceTypesData.length - (state.filterSourceTypes?.length ?? 0)
+  if (state.tagData) {
+    count += state.tagData.length - (state.filterTags?.length ?? 0)
   }
   return count
 })
@@ -53,13 +53,13 @@ export function useFilter() {
     state.modifyDateHistData = await getModifyDateHistogram();
     return state.modifyDateHistData;
   }
-  const getSourceTypesData = async () => {
-    if (state.sourceTypesData !== null) {
-      return state.sourceTypesData
+  const getTagData = async () => {
+    if (state.tagData !== null) {
+      return state.tagData
     }
-    state.sourceTypesData = await getSourceTypeCounts();
-    state.filterSourceTypes = state.sourceTypesData.map(st => st.source_type.id);
-    return state.sourceTypesData;
+    state.tagData = await getTagCounts();
+    state.filterTags = state.tagData.map(st => st.tag.id);
+    return state.tagData;
   }
 
   return {
@@ -69,8 +69,8 @@ export function useFilter() {
     getModifyDateHistData,
     filterModifyDateRange: toRef(state, 'filterModifyDateRange'),
 
-    getSourceTypesData,
-    filterSourceTypes: toRef(state, 'filterSourceTypes'),
+    getTagData,
+    filterTags: toRef(state, 'filterTags'),
 
     totalFiltersActive,
     showDrawer: toRef(state, 'showDrawer'),

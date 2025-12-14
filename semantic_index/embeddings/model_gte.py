@@ -37,7 +37,7 @@ class GTEEmbeddingModel(BaseEmbeddingModel):
             padding=True,
             truncation=True,
             return_tensors="pt",
-            max_length=self.model.config.max_position_embeddings,
+            max_length=self.model.config.max_position_embeddings, # type: ignore
         )
 
         model_out = self.model(

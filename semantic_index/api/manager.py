@@ -5,11 +5,11 @@ from ..data import (
     EmbeddingRepository,
     SourceHandlerRepository,
     SourceRepository,
-    SourceTypeRepository,
+    TagRepository,
 )
 from ..embeddings import EmbeddingFactory
 from ..services import ProcessingService, SearchService
-from ..sources import Resolver, FileSourceHandler, JiraSourceHandler
+from ..sources import Handler, FileSourceHandler, JiraSourceHandler
 
 
 class Manager:
@@ -20,16 +20,18 @@ class Manager:
         self.logger.info("Initializing Semantic Index Manager...")
 
         init_db()
+
         self.repo_source_handler = SourceHandlerRepository()
-        self.repo_source_type = SourceTypeRepository()
         self.repo_source = SourceRepository()
+        self.repo_tag = TagRepository()
         self.repo_embedding = EmbeddingRepository()
-        self.resolver = Resolver(
-            handler_repo=self.repo_source_handler,
-            type_repo=self.repo_source_type,
+
+        self.handler = Handler(
+            [
+                FileSourceHandler(self.repo_source_handler, self.repo_tag),
+                JiraSourceHandler(self.repo_source_handler, self.repo_tag),
+            ]
         )
-        self.resolver.register(FileSourceHandler())
-        self.resolver.register(JiraSourceHandler())
 
         self.embedding_factory = EmbeddingFactory()
         self._processing_service = None
@@ -44,7 +46,7 @@ class Manager:
                 source_repo=self.repo_source,
                 embedding_repo=self.repo_embedding,
                 embedding_factory=self.embedding_factory,
-                resolver=self.resolver,
+                handler=self.handler,
             )
         return self._processing_service
 

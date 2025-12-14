@@ -2,30 +2,28 @@ import abc
 import logging
 from typing import Iterator
 
-from ..data import Source, SourceHandler, SourceType
+from ..data import Source, SourceHandlerRepository, TagRepository
 
 logger = logging.getLogger(__name__)
 
 
 class BaseSourceHandler(abc.ABC):
-    handler_name: str = ""
-    source_types: dict[str, list[str]] = {}
+    def __init__(
+        self,
+        repo_source_handler: SourceHandlerRepository,
+        repo_tag: TagRepository,
+    ):
+        self.name = self.get_name()
+        self.handler = repo_source_handler.get_or_create(self.name)
+        assert self.handler
 
-    def __init__(self):
-        self.source_handler: SourceHandler | None = None
-        self.source_types_by_name: dict[str, SourceType] = {}
+        self.repo_tag = repo_tag
+        self.handler_tag = self.repo_tag.get_or_create(self.name)
+        assert self.handler_tag
 
-    def get_handler(self) -> SourceHandler | None:
-        return self.source_handler
-
-    def set_handler(self, model: SourceHandler) -> None:
-        self.source_handler = model
-
-    def source_type_by_name(self, type_name: str) -> SourceType:
-        return self.source_types_by_name[type_name]
-
-    def set_source_type(self, type_name: str, model: SourceType) -> None:
-        self.source_types_by_name[type_name] = model
+    @abc.abstractmethod
+    def get_name(self) -> str:
+        pass
 
     @abc.abstractmethod
     def index_all(self, base: str) -> Iterator[Source]:

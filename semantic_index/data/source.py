@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Iterator, Optional, TYPE_CHECKING, Sequence
-from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload
+from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload, MANYTOMANY
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -16,10 +16,12 @@ from sqlalchemy import (
 
 from ..api import HistogramResponse
 from .database import Base, get_session, SessionFactory
+from .source_tag import SourceTag
 
 if TYPE_CHECKING:
     from .source_handler import SourceHandler
-    from .source_type import SourceType
+    from .source_tag import SourceTag
+    from .tag import Tag
     from .embedding import Embedding
 
 
@@ -30,23 +32,17 @@ class Source(Base):
     __tablename__ = "sources"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
     source_handler_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("source_handlers.id"), nullable=False
     )
     source_handler: Mapped["SourceHandler"] = relationship(
         "SourceHandler", back_populates="sources"
     )
-
-    source_type_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("source_types.id"), nullable=False
-    )
-    source_type: Mapped["SourceType"] = relationship(
-        "SourceType", back_populates="sources"
-    )
-
     uri: Mapped[str] = mapped_column(String(2048), unique=True, nullable=False)
     resolved_to: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag", secondary=SourceTag, back_populates="sources"
+    )
 
     obj_created: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     obj_modified: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -57,7 +53,7 @@ class Source(Base):
     title: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
     embeddings: Mapped[list["Embedding"]] = relationship(
-        "Embedding", back_populates="source", cascade="all, delete-orphan"
+        "Embedding", back_populates="source"
     )
 
 
@@ -77,11 +73,11 @@ class SourceRepository:
             stmt = (
                 select(Source)
                 .options(
-                    joinedload(Source.source_type),
+                    joinedload(Source.tags),
                 )
                 .where(Source.id == source_id)
             )
-            result = session.execute(stmt).scalar_one_or_none()
+            result = session.execute(stmt).unique().scalar_one_or_none()
             session.expunge_all()
         return result
 
@@ -98,27 +94,23 @@ class SourceRepository:
             session.expunge_all()
         return result
 
-    def upsert_many(self, sources: Iterator[Source]) -> tuple[int, int]:
+    def upsert_many(self, sources: Sequence[Source]) -> tuple[int, int]:
         updated, inserted = 0, 0
         with self._session_factory() as session:
-            try:
-                for count, source in enumerate(sources, start=1):
-                    stmt = select(Source).where(Source.uri == source.uri)
-                    existing = session.execute(stmt).scalar_one_or_none()
-                    if existing:
-                        existing.obj_created = source.obj_created
-                        existing.obj_modified = source.obj_modified
-                        existing.last_checked = datetime.now()
-                        existing.title = source.title
-                        updated += 1
-                    else:
-                        session.add(source)
-                        inserted += 1
-                    if count % 1000 == 0:
-                        session.flush()
-                        logger.debug(f"Upserted {count} sources...")
-            except KeyboardInterrupt:
-                logger.warning("Upsert operation interrupted by user.")
+            for source in sources:
+                stmt = select(Source).where(Source.uri == source.uri)
+                existing = session.execute(stmt).scalar_one_or_none()
+                if not existing:
+                    source.tags = [session.merge(tag) for tag in source.tags]
+                    session.add(source)
+                    inserted += 1
+                    continue
+
+                existing.obj_created = source.obj_created
+                existing.obj_modified = source.obj_modified
+                existing.last_checked = datetime.now()
+                existing.title = source.title
+                updated += 1
         return updated, inserted
 
     def update(self, source: Source) -> None:

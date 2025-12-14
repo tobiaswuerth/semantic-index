@@ -4,41 +4,15 @@ from datetime import datetime
 from typing import Iterator
 
 from ..data import Source
-from .io import supported_extensions, extension_to_reader
+from .io import get_file_extension, supported_extensions, extension_to_reader
 from .base_handler import BaseSourceHandler
 
 logger = logging.getLogger(__name__)
 
 
 class FileSourceHandler(BaseSourceHandler):
-    handler_name = "File"
-    source_types = {
-        "Text": [".txt", ".md"],
-        "PDF": [".pdf"],
-        "Mail": [".msg"],
-        "Word": [".odt", ".doc", ".dot", ".wbk", ".docx", ".docm", ".dotx", ".dotm"],
-        "Spreadsheet": [
-            ".ods",
-            ".csv",
-            ".tsv",
-            ".xls",
-            ".xlt",
-            ".xla",
-            ".xlsx",
-            ".xlsm",
-            ".xltx",
-            ".xltm",
-            ".xlsb",
-        ],
-    }
-
-    def __init__(self):
-        super().__init__()
-        self.ext_to_name = {
-            ext: type_name
-            for type_name, ext_list in self.source_types.items()
-            for ext in ext_list
-        }
+    def get_name(self) -> str:
+        return "File"
 
     def index_all(self, base: str) -> Iterator[Source]:
         if not os.path.isdir(base):
@@ -47,34 +21,32 @@ class FileSourceHandler(BaseSourceHandler):
         for root, _, files in os.walk(base):
             for file in files:
                 path = os.path.join(root, file)
-                try:
-                    yield self.index_one(path)
-                except Exception as e:
-                    logger.warning(f"Failed to index file {path}: {e}")
+                yield self.index_one(path)
 
     def index_one(self, uri: str) -> Source:
         if not os.path.isfile(uri):
             raise ValueError(f"Source path is not a file: {uri}")
 
-        ext = os.path.splitext(uri)[1].lower()
-        if ext not in self.ext_to_name:
-            raise ValueError(f"Unsupported file extension: {ext}")
-
-        type_name = self.ext_to_name[ext]
-        type_model = self.source_type_by_name(type_name)
-        assert type_model
-        handler_model = self.get_handler()
-        assert handler_model
-
         stat = os.stat(uri)
         obj_created = datetime.fromtimestamp(stat.st_birthtime)
         obj_modified = datetime.fromtimestamp(stat.st_mtime)
+        if obj_created > obj_modified:
+            logger.warning(
+                (
+                    f"File modification time is earlier than creation time for {uri}. "
+                    f"Setting modification time to creation time."
+                    f"{obj_created=} > {obj_modified=}"
+                )
+            )
+            obj_modified = obj_created
+
+        ext = get_file_extension(uri)
+        tags = [self.handler_tag, self.repo_tag.get_or_create(ext)]
 
         logger.debug(f"Indexing file: {uri}")
         return Source(
             id=None,
-            source_handler_id=handler_model.id,
-            source_type_id=type_model.id,
+            source_handler_id=self.handler.id,
             uri=uri,
             resolved_to=f"file://{uri}",
             title=os.path.basename(uri),
@@ -84,10 +56,11 @@ class FileSourceHandler(BaseSourceHandler):
             last_processed=None,
             error=False,
             error_message=None,
+            tags=tags,
         )
 
     def _read_source(self, source: Source) -> str:
-        ext = os.path.splitext(source.uri)[1].lower()
+        ext = get_file_extension(source.uri)
         if ext not in supported_extensions:
             raise ValueError(f"Unsupported file extension: {ext}")
 

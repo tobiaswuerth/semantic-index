@@ -1,6 +1,5 @@
-export interface SourceType {
+export interface Tag {
     id: number;
     name: string;
-    source_handler_id: number;
     contains: string[] | null;
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SearchResult } from "@/dto/searchResult";
 import { useToast } from "primevue/usetoast";
-import SourceTypeBadge from "./SourceTypeBadge.vue";
+import TagBadge from "./TagBadge.vue";
 const toast = useToast();
 
 interface Props {
@@ -45,7 +45,7 @@ const handleResolveLink = (source: SearchResult['source']) => {
     <template #header>
       <div class="header-content">
         <strong>{{ props.result.source.title }}</strong>
-        <SourceTypeBadge :sourceType="props.result.source.source_type" />
+        <TagBadge v-for="tag in props.result.source.tags" :key="tag.id" :tag="tag" />
         <br />
         <small>
           <a @click="handleResolveLink(props.result.source)" class="resolve-link">
