@@ -7,6 +7,8 @@ from sqlalchemy import (
     LargeBinary,
     Index,
     delete,
+    func,
+    case,
     select,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -75,7 +77,7 @@ class EmbeddingRepository:
             result = cast(CursorResult, session.execute(stmt))
         return result.rowcount if result.rowcount else 0
 
-    def get_all_with_date_and_type(
+    def get_tagged_within_date(
         self,
         filter: SearchDateFilter,
         tag_ids: list[int] | None,
@@ -96,8 +98,15 @@ class EmbeddingRepository:
                 stmt = stmt.join(Source, Embedding.source_id == Source.id)
 
             if tag_ids is not None:
-                stmt = stmt.join(SourceTag, Source.id == SourceTag.c.source_id)
-                stmt = stmt.where(SourceTag.c.tag_id.in_(tag_ids))
+                valid_sources = (
+                    select(SourceTag.c.source_id)
+                    .group_by(SourceTag.c.source_id)
+                    .having(
+                        func.sum(case((SourceTag.c.tag_id.in_(tag_ids), 0), else_=1))
+                        == 0
+                    )
+                ).subquery()
+                stmt = stmt.where(Source.id.in_(select(valid_sources.c.source_id)))
 
             if filter.createdate_start:
                 stmt = stmt.where(Source.obj_created >= filter.createdate_start)

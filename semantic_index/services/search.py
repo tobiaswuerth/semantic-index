@@ -24,7 +24,7 @@ class SearchService:
     def _get_similar_embeddings(
         self, request: SearchRequest
     ) -> tuple[Sequence[Embedding], np.ndarray, np.ndarray]:
-        embeddings = self._embedding_repo.get_all_with_date_and_type(
+        embeddings = self._embedding_repo.get_tagged_within_date(
             request.date_filter, request.tag_ids
         )
         if not embeddings:
