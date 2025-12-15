@@ -1,6 +1,7 @@
 import logging
+from cachetools import cached, TTLCache
 from datetime import datetime, timedelta
-from typing import Iterator, Optional, TYPE_CHECKING, Sequence
+from typing import Optional, TYPE_CHECKING, Sequence
 from sqlalchemy.orm import Mapped, mapped_column, relationship, joinedload, MANYTOMANY
 from sqlalchemy import (
     Boolean,
@@ -61,6 +62,7 @@ class SourceRepository:
     def __init__(self, session_factory: SessionFactory = get_session):
         self._session_factory = session_factory
 
+    @cached(cache=TTLCache(maxsize=1, ttl=300))
     def get_all(self) -> Sequence[Source]:
         with self._session_factory() as session:
             stmt = select(Source).order_by(Source.obj_modified.desc())
@@ -131,12 +133,16 @@ class SourceRepository:
     def get_modifydate_histogram(self) -> list[HistogramResponse]:
         return self._get_date_histogram(Source.obj_modified)
 
+    @cached(cache=TTLCache(maxsize=2, ttl=300))
     def _get_date_histogram(self, field: Mapped[datetime]) -> list[HistogramResponse]:
         from .embedding import Embedding  # avoid circular import
 
         with self._session_factory() as session:
             # get global min date
-            min_date_row = session.execute(select(func.min(field))).first()
+            stmt = select(func.min(field)).join(
+                Embedding, Embedding.source_id == Source.id
+            )
+            min_date_row = session.execute(stmt).first()
             if not min_date_row or len(min_date_row) == 0 or min_date_row[0] is None:
                 return []
             min_date = min_date_row[0]
