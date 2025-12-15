@@ -5,8 +5,8 @@ Create a searchable semantic index to find documents and sites.
 ![image](https://github.com/user-attachments/assets/eab28a58-bc28-45f9-8fe3-80d8c4e5b334)
 
 **Note:**
-- This is only a proof of concept. Tested on Windows.
-- Currently only supports indexing the file system. It should, however, be easily extensible to other source types, e.g. crawling a wiki.
+- This is a proof of concept. Tested on Windows and Jira 9.12.1.
+- Currently supports indexing the file system and Jira but is built to be extended with new source handlers.
 - When processing large amounts of data, it is advisable to have a GPU with CUDA support.
 
 # Usage
