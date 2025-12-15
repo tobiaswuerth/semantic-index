@@ -88,8 +88,8 @@ watch(showDrawer, (newVal) => {
             <Divider />
 
             <div>
-                <div class="source-type-filter-header">
-                    <h4>Source Types</h4>
+                <div class="tag-filter-header">
+                    <h4>Tags</h4>
                     <Button variant="text" icon="pi pi-refresh" size="small" @click="reset"
                         v-tooltip.top="'Reset Filter'" />
                 </div>
@@ -126,7 +126,7 @@ watch(showDrawer, (newVal) => {
 </template>
 
 <style scoped>
-.source-type-filter-header {
+.tag-filter-header {
     display: flex;
     align-items: center;
 }
