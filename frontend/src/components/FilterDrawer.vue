@@ -61,6 +61,10 @@ const reset = () => {
     filterTags.value = tagData.value?.map(stype => stype.tag.id) || [];
 };
 
+const handleDoubleClickTag = (tagId: number) => {
+    filterTags.value = [tagId];
+};
+
 watch(showDrawer, (newVal) => {
     if (newVal) {
         if (!tagDataLoading.value && tagData.value === null) {
@@ -103,7 +107,8 @@ watch(showDrawer, (newVal) => {
                     </div>
                 </div>
                 <div v-else>
-                    <div v-for="stype in tagData" :key="stype.tag.id" class="p-field-checkbox">
+                    <div v-for="stype in tagData" :key="stype.tag.id" class="p-field-checkbox"
+                        @dblclick="handleDoubleClickTag(stype.tag.id)">
                         <Checkbox :inputId="`stype-${stype.tag.id}`" :value="stype.tag.id" v-model="filterTags" />
                         <label :for="`stype-${stype.tag.id}`">
                             <TagBadge :tag="stype.tag" />
