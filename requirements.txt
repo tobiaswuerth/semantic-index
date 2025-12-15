@@ -18,3 +18,4 @@ openpyxl
 odfpy
 pyxlsb
 pywin32
+cachetools
