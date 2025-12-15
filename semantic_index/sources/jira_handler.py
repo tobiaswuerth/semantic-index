@@ -54,10 +54,10 @@ class JiraSourceHandler(BaseSourceHandler):
             results = data.get("issues", [])
             for issue in results:
                 issue_key = issue.get("key", None)
-                fields = issue.get("fields", {})
+                fields = issue.get("fields") or {}
                 yield self._index_issue(issue["self"], issue)
 
-                for comment in fields.get("comment", {}).get("comments", []):
+                for comment in (fields.get("comment") or {}).get("comments", []):
                     yield self._index_comment(comment["self"], comment, issue_key)
 
                 for attachment in fields.get("attachment", []):
@@ -192,27 +192,27 @@ class JiraSourceHandler(BaseSourceHandler):
 
         fields = data["fields"]
 
-        issuetype = fields.get("issuetype", {}).get("name", "N/A")
+        issuetype = (fields.get("issuetype") or {}).get("name", "N/A")
 
         parent = None
         has_parent = "parent" in fields
         if has_parent:
             parent = fields["parent"]
-            parent = f'{parent.get("key", "N/A")}: {parent.get("fields", {}).get("summary", "")}'
+            parent = f'{parent.get("key", "N/A")}: {(parent.get("fields") or {}).get("summary", "")}'
 
-        project = fields.get("project", {}).get("name", "N/A")
+        project = (fields.get("project") or {}).get("name", "N/A")
         fix_versions = ", ".join(
             [v.get("name", "") for v in fields.get("fixVersions", [])]
         )
 
-        resolution = fields.get("resolution", {})
+        resolution = fields.get("resolution") or {}
         resolution = (
             "Unresolved" if not resolution else resolution.get("name", "Unresolved")
         )
 
         resolutiondate = fields.get("resolutiondate", "N/A")
         createdate = fields.get("created", "N/A")
-        priority = fields.get("priority", {}).get("name", "N/A")
+        priority = (fields.get("priority") or {}).get("name", "N/A")
         labels = ", ".join(fields.get("labels", []))
 
         issuelinks = []
@@ -224,9 +224,9 @@ class JiraSourceHandler(BaseSourceHandler):
             issuelinks.append(f"- {link_type} {linked_key}: {linked_summary}")
         issuelinks = "\n".join(issuelinks) if issuelinks else "N/A"
 
-        assignee = fields.get("assignee", {}).get("displayName", "Unassigned")
+        assignee = (fields.get("assignee") or {}).get("displayName", "Unassigned")
         updatedate = fields.get("updated", "N/A")
-        status = fields.get("status", {}).get("name", "N/A")
+        status = (fields.get("status") or {}).get("name", "N/A")
         components = ", ".join(
             [c.get("name", "") for c in fields.get("components", [])]
         )
@@ -236,20 +236,19 @@ class JiraSourceHandler(BaseSourceHandler):
             [f"- {att.get('filename', 'N/A')}" for att in fields.get("attachment", [])]
         )
         summary = fields.get("summary", "<no summary>")
-        creator = fields.get("creator", {}).get("displayName", "N/A")
+        creator = (fields.get("creator") or {}).get("displayName", "N/A")
 
         subtasks = "\n".join(
             [
-                f"- {subtask.get('key', 'N/A')}: {subtask.get('fields', {}).get('summary', '')}"
+                f"- {subtask.get('key', 'N/A')}: {(subtask.get('fields') or {}).get('summary', '')}"
                 for subtask in fields.get("subtasks", [])
             ]
         )
-        reporter = fields.get("reporter", {}).get("displayName", "N/A")
-
+        reporter = (fields.get("reporter") or {}).get("displayName", "N/A")
         comments = "\n".join(
             [
-                f"- {comment.get('updateAuthor', {}).get('displayName', 'N/A')}: {comment.get('body', '')}"
-                for comment in fields.get("comment", {}).get("comments", [])
+                f"- {(comment.get('updateAuthor') or {}).get('displayName', 'N/A')}: {comment.get('body', '')}"
+                for comment in (fields.get("comment") or {}).get("comments", [])
             ]
         )
 
@@ -274,7 +273,7 @@ class JiraSourceHandler(BaseSourceHandler):
 
     def _read_comment(self, source: Source) -> str:
         data = self._jira_auth_req(source.uri).json()
-        author = data.get("updateAuthor", {}).get("displayName", "N/A")
+        author = (data.get("updateAuthor") or {}).get("displayName", "N/A")
         createdate = data.get("created", "N/A")
         updatedate = data.get("updated", createdate)
         body = data.get("body", "<no content>")
@@ -301,10 +300,10 @@ class JiraSourceHandler(BaseSourceHandler):
             reader = extension_to_reader[ext]
             content = reader(str(temp_path))
 
-        author = metadata.get("author", {}).get("displayName", "N/A")
+        author = (metadata.get("author") or {}).get("displayName", "N/A")
         created = metadata.get("created", "N/A")
         updated = metadata.get("updated", created)
-        update_author = metadata.get("updateAuthor", {}).get("displayName", "N/A")
+        update_author = (metadata.get("updateAuthor") or {}).get("displayName", "N/A")
         size = metadata.get("size", "N/A")
         mime_type = metadata.get("mimeType", "N/A")
         body = content if content else "<no content>"
