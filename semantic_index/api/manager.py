@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from ..data import (
     init_db,
@@ -11,13 +12,12 @@ from ..embeddings import EmbeddingFactory
 from ..services import ProcessingService, SearchService
 from ..sources import Handler, FileSourceHandler, JiraSourceHandler
 
+logger = logging.getLogger(__name__)
+
 
 class Manager:
     def __init__(self):
-        global _manager
-        assert _manager is None, "Manager instance already exists! use get_manager()"
-        self.logger = logging.getLogger(__name__)
-        self.logger.info("Initializing Semantic Index Manager...")
+        logger.info("Initializing Semantic Index Manager...")
 
         init_db()
 
@@ -37,7 +37,7 @@ class Manager:
         self._processing_service = None
         self._search_service = None
 
-        self.logger.info("Semantic Index Manager initialized.")
+        logger.info("Semantic Index Manager initialized.")
 
     @property
     def processing_service(self) -> ProcessingService:
@@ -62,10 +62,13 @@ class Manager:
 
 
 _manager: Manager = None  # type: ignore
+_init_lock = threading.Lock()
 
 
 def get_manager() -> Manager:
     global _manager
     if _manager is None:
-        _manager = Manager()
+        with _init_lock:
+            if _manager is None:
+                _manager = Manager()
     return _manager
